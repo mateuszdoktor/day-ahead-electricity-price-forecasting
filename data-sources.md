@@ -19,7 +19,7 @@
 - Brent crude oil price (LCOc1)
 - Carbon emissions price (CFI2Z6)
 - Rotterdam coal price (ATWMc1)
-- TTF gas price
+- Dutch TTF Natural Gas (TFMBMc1)
 - EUR/CZK exchange rate
 - EUR/PLN exchange rate
 - EUR/USD exchange rate
