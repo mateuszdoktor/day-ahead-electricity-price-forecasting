@@ -1,11 +1,16 @@
 ## ENTSO-E
 
 - Generation unit availability (planned outages and unplanned outages)
+- Unavailability of transmission infrastructure (planned outages)
 - Generation by energy source
+- Day ahead generation forecast for wind and solar
+- Day ahead aggregated generation
 - Available generation capacity
 - Hourly forecast of the Polish power system demand (KSE)
 - Actual power system demand (historical)
 - Physical cross-border flows
+- Imbalance prices
+- Total imbalance volume
 
 ## JOA
 
