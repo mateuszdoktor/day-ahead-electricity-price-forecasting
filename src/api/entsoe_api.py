@@ -11,8 +11,6 @@ logger = logging.getLogger(__name__)
 
 DATASETS = {
     "day_ahead_prices": ("query_day_ahead_prices", {}),
-    "cross_border_import": ("query_physical_crossborder_allborders", {"export": False}),
-    "cross_border_export": ("query_physical_crossborder_allborders", {"export": True}),
     "load": ("query_load", {}),
     "load_forecast": ("query_load_forecast", {}),
     "generation": ("query_generation", {}),
@@ -20,8 +18,6 @@ DATASETS = {
     "generation_wind_solar_forecast": ("query_wind_and_solar_forecast", {}),
     "generation_units_unavailability": ("query_unavailability_of_generation_units", {}),
     "production_units_unavailability": ("query_unavailability_of_production_units", {}),
-    "imbalance_prices": ("query_imbalance_prices", {}),
-    "imbalance_volumes": ("query_imbalance_volumes", {}),
     "water_reservoirs_hydro_storage": (
         "query_aggregate_water_reservoirs_and_hydro_storage",
         {},
