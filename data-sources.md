@@ -1,15 +1,15 @@
 ## ENTSO-E
 
 - Generation unit availability (planned outages and unplanned outages)
-- Unavailability of transmission infrastructure (planned outages)
-- Generation by energy source
 - Day ahead generation forecast for wind and solar
 - Day ahead aggregated generation
-- Hourly forecast of the Polish power system demand (KSE)
-- Actual power system demand (historical)
+- Day ahead load forecast
+- Actual load
+- Actual generation by energy source
 - Physical cross-border flows
 - Imbalance prices
-- Total imbalance volume
+- Imbalance volume
+- Pumped storage/reservoir stored energy
 
 ## JOA
 
@@ -25,7 +25,6 @@
 - Rotterdam coal price (ATWMc1)
 - Dutch TTF Natural Gas (TFMBMc1)
 - German Power Baseload Electricity Month (DBEc1)
-- EUR/CZK exchange rate
 - EUR/PLN exchange rate
 - EUR/USD exchange rate
 
