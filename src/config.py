@@ -21,3 +21,17 @@ VAL_DATASET_END = "2025-08-31"
 # 54 weeks - 378 days
 TEST_DATASET_START = "2025-09-01"
 TEST_DATASET_END = "2026-09-13"
+
+ENTOSE_BIDDING_ZONE_CODES = [
+    "AT",
+    "CZ",
+    "DE_LU",
+    "FR",
+    "HU",
+    "LT",
+    "NO",
+    "PL",
+    "SE",
+    "SE_4",
+    "SK",
+]
