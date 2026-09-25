@@ -20,13 +20,11 @@
 
 ## Investing.com
 
-- Brent crude oil price (LCOc1)
 - Carbon emissions price (CFI2Zc1)
 - Rotterdam coal price (ATWMc1)
 - Dutch TTF Natural Gas (TFMBMc1)
 - German Power Baseload Electricity Month (DBEc1)
 - EUR/PLN exchange rate
-- EUR/USD exchange rate
 
 ## Open-Meteo / Meteostat
 
