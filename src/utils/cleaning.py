@@ -1,8 +1,6 @@
 import logging
-
 import pandas as pd
-
-from src.config import DATA_DIR
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -200,19 +198,103 @@ def clean_fr(data: DataDict, cfg: dict = COUNTRY_CONFIG["FR"]) -> DataDict:
     return data
 
 
-def save_data_entsoe(
-    name: str,
-    data: pd.Series | pd.DataFrame,
-    country_code: str,
-    start_date: pd.Timestamp,
-    end_date: pd.Timestamp,
-) -> None:
-    data_dir = DATA_DIR / "clean" / "entsoe" / country_code / f"{start_date}_{end_date}"
-    data_dir.mkdir(parents=True, exist_ok=True)
+# --- Investing.com ------------------------------
 
-    file_path = data_dir / f"{name}.parquet"
-    if isinstance(data, pd.Series):
-        data = data.to_frame()
-    data.to_parquet(file_path)
+INVESTING_COM_DATASETS = [
+    "dutch_ttf_natural_gas_futures",
+    "rotterdam_coal_futures",
+    "german_power_baseload_futures",
+    "eu_carbon_emissions_futures",
+    "eur_pln",
+]
 
-    logger.info(f"Saved {file_path.relative_to(DATA_DIR)}")
+
+def clean_investing_com_datasets(data: DataDict) -> DataDict:
+    columns_to_drop = ["Date", "Open", "High", "Low", "Vol.", "Change %"]
+
+    for dataset in INVESTING_COM_DATASETS:
+        data = drop_columns(
+            data,
+            datasets=[dataset],
+            columns_list=[columns_to_drop],
+        )
+
+    return data
+
+
+# --- JAO -----------------------------
+
+JAO_DATASETS = ["allocation_constraint", "d2cf", "minmax_np", "refprog"]
+
+
+def clean_jao_datasets(data: DataDict) -> DataDict:
+    data = drop_columns(
+        data,
+        datasets=["refprog"],
+        columns_list=[
+            [
+                "border_DE_DE_DK1_VH",
+                "border_DE_DK2_BigHub_DE",
+                "border_NL_DK1_COBRA",
+                "border_RO_RO_BG_VH",
+                "border_NL_NL_NO2_NorNed",
+                "border_DE_NO2_BigHub_DE",
+                "border_DE_DE_SE4_Baltic",
+                "border_PL_PL_SE4_SwePol",
+                "border_PL_LT_BigHub_PL",
+                "border_DK1_UK_Viking1",
+                "border_DK1_UK_Viking2",
+                "border_RO_MD",
+                "border_UA_MD",
+                "border_ES_MA_ESMA_link1",
+                "border_ES_MA_ESMA_link2",
+                "border_KS_ME",
+                "border_SI_HU",
+                "border_KS_AL",
+                "border_MK_KS",
+                "border_IT_MEMONITA2",
+                "border_ME_ITMONITA2",
+                "border_RS_KS",
+            ]
+        ],
+    )
+
+    data = drop_columns(
+        data,
+        datasets=["minmax_np"],
+        columns_list=[
+            [
+                "minDE_NO2_BigHub",
+                "maxDE_NO2_BigHub",
+                "minNL_NO2_NorNed",
+                "maxNL_NO2_NorNed",
+                "minDE_DK2_BigHub",
+                "maxDE_DK2_BigHub",
+                "minDE_SE4_Baltic",
+                "maxDE_SE4_Baltic",
+                "minPL_LT_BigHub",
+                "maxPL_LT_BigHub",
+                "minPL_SE4_SwePol",
+                "maxPL_SE4_SwePol",
+                "minRO_BG_VH",
+                "maxRO_BG_VH",
+                "minNL_DK1_COBRA",
+                "maxNL_DK1_COBRA",
+                "minDE_DK1_VH",
+                "maxDE_DK1_VH",
+            ]
+        ],
+    )
+
+    data = drop_columns(
+        data,
+        datasets=["allocation_constraint"],
+        columns_list=[
+            [
+                "BE_export",
+                "BE_import",
+            ]
+        ],
+    )
+
+    return data
