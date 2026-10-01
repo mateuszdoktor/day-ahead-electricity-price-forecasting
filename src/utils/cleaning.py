@@ -8,9 +8,10 @@ logger = logging.getLogger(__name__)
 
 DataDict = dict[str, pd.DataFrame]
 
-GENERATION_UNAVAILABILITY = "generation_units_unavailability"
-PRODUCTION_UNAVAILABILITY = "production_units_unavailability"
-UNAVAILABILITY_DATASETS = [GENERATION_UNAVAILABILITY, PRODUCTION_UNAVAILABILITY]
+UNAVAILABILITY_DATASETS = [
+    "generation_units_unavailability",
+    "production_units_unavailability",
+]
 
 COUNTRY_CONFIG = {
     "PL": {
@@ -49,22 +50,6 @@ def drop_columns(
 def drop_datasets(data: DataDict, datasets: list[str]) -> DataDict:
     for dataset in datasets:
         data.pop(dataset, None)
-    return data
-
-
-def drop_rows_missing_power_or_plant_type(
-    data: DataDict, datasets: list[str] | None = None
-) -> DataDict:
-    required = ["nominal_power", "plant_type"]
-    if datasets is None:
-        datasets = UNAVAILABILITY_DATASETS
-
-    for dataset in datasets:
-        if dataset not in data:
-            continue
-        df = data[dataset]
-        if set(required).issubset(df.columns):
-            data[dataset] = df.dropna(subset=required)
     return data
 
 
@@ -111,76 +96,19 @@ def convert_timezone(data: DataDict, timezone: str = "UTC") -> DataDict:
     return data
 
 
-def convert_column_types(
-    data: DataDict, datasets: list[str], columns: list[str], types: list[str]
-) -> DataDict:
-    dtypes = dict(zip(columns, types))
-    for dataset in datasets:
-        data[dataset] = data[dataset].astype(dtypes)
-    return data
-
-
-def filter_businesstype(data: DataDict, dataset: str, keep: str) -> DataDict:
-    df = data[dataset]
-    data[dataset] = df[df["businesstype"] == keep]
-    return data
-
-
-def drop_invalid_units_unavailability(data: DataDict, dataset: str) -> DataDict:
-    df = data[dataset].copy()
-
-    df = df.drop_duplicates(keep="first")
-    df = df.drop_duplicates(subset=["mrid", "revision"], keep="first")
-    df = df.reset_index()
-
-    start = pd.to_datetime(df["start"], utc=True)
-    end = pd.to_datetime(df["end"], utc=True)
-    created = pd.to_datetime(df["created_doc_time"], utc=True)
-
-    created_over_3_years_before_start = (start - created).dt.days > 3 * 365
-    created_on_or_after_end = created >= end
-
-    data[dataset] = df[~(created_over_3_years_before_start | created_on_or_after_end)]
-    return data
-
-
-def prepare_units_unavailability(
-    data: DataDict, dataset: str, businesstype: str | None = None
-) -> DataDict:
-    data = drop_columns(data, datasets=[dataset], columns_list=[["docstatus"]])
-    if businesstype is not None:
-        data = filter_businesstype(data, dataset=dataset, keep=businesstype)
-    data = convert_column_types(
-        data,
-        datasets=[dataset],
-        columns=["avail_qty", "pstn"],
-        types=["float", "float"],
-    )
-    data = drop_rows_missing_power_or_plant_type(data, datasets=[dataset])
-    data = drop_invalid_units_unavailability(data, dataset=dataset)
-    return data
-
-
 def clean_pl(data: DataDict, cfg: dict = COUNTRY_CONFIG["PL"]) -> DataDict:
     data = drop_columns(
         data,
         datasets=["generation", "generation_wind_solar_forecast"],
         columns_list=[cfg["drop_gen_types"], cfg["drop_ws_forecast"]],
     )
-    data = drop_datasets(data, datasets=[PRODUCTION_UNAVAILABILITY])
-    data = prepare_units_unavailability(
-        data,
-        dataset=GENERATION_UNAVAILABILITY,
-        businesstype="Planned maintenance",
-    )
+    data = drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
     data = drop_duplicate_index(data, datasets=["day_ahead_prices"], strategy="first")
     return data
 
 
 def clean_de_lu(data: DataDict) -> DataDict:
-    data = drop_datasets(data, datasets=[PRODUCTION_UNAVAILABILITY])
-    data = prepare_units_unavailability(data, dataset=GENERATION_UNAVAILABILITY)
-    return data
+    return drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
 
 
 def clean_lt(data: DataDict, cfg: dict = COUNTRY_CONFIG["LT"]) -> DataDict:
@@ -188,8 +116,7 @@ def clean_lt(data: DataDict, cfg: dict = COUNTRY_CONFIG["LT"]) -> DataDict:
 
 
 def clean_fr(data: DataDict, cfg: dict = COUNTRY_CONFIG["FR"]) -> DataDict:
-    for dataset in UNAVAILABILITY_DATASETS:
-        data = prepare_units_unavailability(data, dataset=dataset)
+    data = drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
     data = drop_columns(
         data,
         datasets=["generation_wind_solar_forecast"],
