@@ -25,10 +25,16 @@ def load_entsoe_data(
     }
 
 
-def load_jao_data(
+def load_parquet_data(
     data_dir: Path,
 ) -> DataDict:
     return {file.stem: pd.read_parquet(file) for file in data_dir.iterdir()}
+
+
+def load_jao_data(
+    data_dir: Path,
+) -> DataDict:
+    return load_parquet_data(data_dir)
 
 
 def load_investing_data(
