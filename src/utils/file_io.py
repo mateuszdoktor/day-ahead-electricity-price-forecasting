@@ -132,3 +132,23 @@ def inspect_entsoe_files(
                 f"  [FILE] {rel_path} | shape: {df.shape} | "
                 f"idx: {df.index.min()}-{df.index.max()}"
             )
+
+
+def inspect_merged_file(file_path: Path) -> None:
+    df = pd.read_parquet(file_path)
+    rel_path = file_path.relative_to(BASE_DIR)
+    print(
+        f"  [FILE] {rel_path} | shape: {df.shape} | "
+        f"idx: {df.index.min()}-{df.index.max()} | "
+        f"cols: {len(df.columns)} | NaN: {int(df.isna().sum().sum())}"
+    )
+
+
+def save_merged_data(df: pd.DataFrame, file_path: Path) -> None:
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(file_path)
+    logger.info(f"Saved {file_path.relative_to(DATA_DIR)}")
+
+
+def load_merged_data(file_path: Path) -> pd.DataFrame:
+    return pd.read_parquet(file_path)

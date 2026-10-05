@@ -74,3 +74,39 @@ def preprocess_investing_com(data: DataDict, end: pd.Timestamp) -> DataDict:
         name: extend_forward_fill(df.sort_index(), end, freq="D")
         for name, df in data.items()
     }
+
+
+def _snake_case(value) -> str:
+    return str(value).strip().replace(" ", "_").replace("/", "_").replace("-", "_")
+
+
+def _rename_columns(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
+    renamed = df.copy()
+    if renamed.columns.equals(pd.RangeIndex(len(renamed.columns))) or list(
+        renamed.columns
+    ) == [0]:
+        renamed.columns = [prefix]
+        return renamed
+    if len(renamed.columns) == 1:
+        renamed.columns = [prefix]
+        return renamed
+    renamed.columns = [f"{prefix}_{_snake_case(col)}" for col in renamed.columns]
+    return renamed
+
+
+def merge_entsoe(data: dict[str, DataDict]) -> pd.DataFrame:
+    frames = []
+    for zone, datasets in data.items():
+        for name, df in datasets.items():
+            frames.append(_rename_columns(df, f"{zone}_{name}"))
+    return pd.concat(frames, axis=1, join="outer").sort_index()
+
+
+def merge_jao(data: DataDict) -> pd.DataFrame:
+    frames = [_rename_columns(df, name) for name, df in data.items()]
+    return pd.concat(frames, axis=1, join="outer").sort_index()
+
+
+def merge_investing_com(data: DataDict) -> pd.DataFrame:
+    frames = [_rename_columns(df, name) for name, df in data.items()]
+    return pd.concat(frames, axis=1, join="outer").sort_index()
