@@ -94,6 +94,15 @@ def _rename_columns(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
     return renamed
 
 
+def merge_entsoe_zone(data: DataDict) -> pd.DataFrame:
+    frames = [_rename_columns(df, name) for name, df in data.items()]
+    return pd.concat(frames, axis=1, join="outer").sort_index()
+
+
+def merge_entsoe_zones(data: dict[str, DataDict]) -> DataDict:
+    return {zone: merge_entsoe_zone(datasets) for zone, datasets in data.items()}
+
+
 def merge_entsoe(data: dict[str, DataDict]) -> pd.DataFrame:
     frames = []
     for zone, datasets in data.items():
