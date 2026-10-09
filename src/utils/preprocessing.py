@@ -29,6 +29,8 @@ def fill_from_previous_days(
 
 def preprocess_dataset(name: str, df: pd.DataFrame) -> pd.DataFrame:
     df = df.resample("h").mean()
+    if name == "generation_forecast":
+        df = df.mask(df == 0)
     df = df.apply(interpolate_short_gaps)
     days = 1 if name in WEATHER_DRIVEN_DATASETS else 7
     return fill_from_previous_days(df, days=days)
@@ -71,7 +73,7 @@ def preprocess_jao(data: DataDict) -> DataDict:
 
 def preprocess_investing_com(data: DataDict, end: pd.Timestamp) -> DataDict:
     return {
-        name: extend_forward_fill(df.sort_index(), end, freq="D")
+        name: extend_forward_fill(df.sort_index(), end, freq="h")
         for name, df in data.items()
     }
 
@@ -103,11 +105,8 @@ def merge_entsoe_zones(data: dict[str, DataDict]) -> DataDict:
     return {zone: merge_entsoe_zone(datasets) for zone, datasets in data.items()}
 
 
-def merge_entsoe(data: dict[str, DataDict]) -> pd.DataFrame:
-    frames = []
-    for zone, datasets in data.items():
-        for name, df in datasets.items():
-            frames.append(_rename_columns(df, f"{zone}_{name}"))
+def merge_entsoe_zone_frames(zones: DataDict) -> pd.DataFrame:
+    frames = [df.add_prefix(f"{zone}_") for zone, df in zones.items()]
     return pd.concat(frames, axis=1, join="outer").sort_index()
 
 
