@@ -28,7 +28,24 @@ def load_entsoe_data(
 def load_parquet_data(
     data_dir: Path,
 ) -> DataDict:
-    return {file.stem: pd.read_parquet(file) for file in data_dir.iterdir()}
+    return {
+        file.stem: pd.read_parquet(file) for file in sorted(data_dir.glob("*.parquet"))
+    }
+
+
+def load_entsoe_zones(data_dir: Path) -> DataDict:
+    return load_parquet_data(data_dir)
+
+
+def save_entsoe_zones(data: DataDict, output_dir: Path) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for stale_file in output_dir.glob("*.parquet"):
+        if stale_file.stem not in data:
+            stale_file.unlink()
+            logger.info("Removed stale file %s", stale_file.relative_to(DATA_DIR))
+
+    save_data(data, output_dir)
 
 
 def load_jao_data(
@@ -132,6 +149,14 @@ def inspect_entsoe_files(
                 f"  [FILE] {rel_path} | shape: {df.shape} | "
                 f"idx: {df.index.min()}-{df.index.max()}"
             )
+
+
+def inspect_entsoe_zone_files(output_dir: Path) -> None:
+    file_paths = sorted(output_dir.glob("*.parquet"))
+    print(f"\n--- ENTSO-E zones ({len(file_paths)} file/s) " + "-" * 30)
+
+    for fp in file_paths:
+        inspect_merged_file(fp)
 
 
 def inspect_merged_file(file_path: Path) -> None:
