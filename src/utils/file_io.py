@@ -177,3 +177,21 @@ def save_merged_data(df: pd.DataFrame, file_path: Path) -> None:
 
 def load_merged_data(file_path: Path) -> pd.DataFrame:
     return pd.read_parquet(file_path)
+
+
+def final_dataset_path(model: str, scope: str, split: str = "full") -> Path:
+    return DATA_DIR / "final" / f"{model}_{scope}_{split}.parquet"
+
+
+def load_final_dataset(
+    model: str,
+    scope: str,
+    split: str = "full",
+    with_pca_features: bool = False,
+) -> pd.DataFrame:
+    df = pd.read_parquet(final_dataset_path(model, scope, split))
+    if with_pca_features:
+        return df
+
+    columns = [column for column in df.columns if "pca" in column.lower()]
+    return df.drop(columns=columns)
