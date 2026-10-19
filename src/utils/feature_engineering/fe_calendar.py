@@ -3,6 +3,8 @@ import datetime as dt
 import holidays
 import pandas as pd
 
+from src.config import LOCAL_TZ
+
 CALENDAR_COLUMNS = ["hour", "dow", "month", "is_holiday", "is_bridge"]
 
 
@@ -24,20 +26,21 @@ def _is_bridge(day: dt.date, days_off: set[dt.date]) -> bool:
 
 
 def calendar_frame(index: pd.DatetimeIndex) -> pd.DataFrame:
-    days_off = _holiday_dates(index)
+    local = index if index.tz is None else index.tz_convert(LOCAL_TZ)
+    days_off = _holiday_dates(local)
     holiday = {}
     bridge = {}
-    for day in index.normalize().unique():
+    for day in local.normalize().unique():
         date = day.date()
         holiday[date] = int(date in days_off)
         bridge[date] = int(_is_bridge(date, days_off))
 
-    dates = index.date
+    dates = local.date
     return pd.DataFrame(
         {
-            "hour": index.hour,
-            "dow": index.dayofweek,
-            "month": index.month,
+            "hour": local.hour,
+            "dow": local.dayofweek,
+            "month": local.month,
             "is_holiday": [holiday[date] for date in dates],
             "is_bridge": [bridge[date] for date in dates],
         },

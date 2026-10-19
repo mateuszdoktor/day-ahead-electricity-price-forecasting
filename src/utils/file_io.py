@@ -159,8 +159,16 @@ def inspect_entsoe_zone_files(output_dir: Path) -> None:
         inspect_merged_file(fp)
 
 
+def read_frame(file_path: Path) -> pd.DataFrame:
+    if file_path.suffix == ".csv":
+        df = pd.read_csv(file_path, index_col=0)
+        df.index = pd.to_datetime(df.index)
+        return df
+    return pd.read_parquet(file_path)
+
+
 def inspect_merged_file(file_path: Path) -> None:
-    df = pd.read_parquet(file_path)
+    df = read_frame(file_path)
     rel_path = file_path.relative_to(BASE_DIR)
     print(
         f"  [FILE] {rel_path} | shape: {df.shape} | "
@@ -171,7 +179,10 @@ def inspect_merged_file(file_path: Path) -> None:
 
 def save_merged_data(df: pd.DataFrame, file_path: Path) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(file_path)
+    if file_path.suffix == ".csv":
+        df.to_csv(file_path)
+    else:
+        df.to_parquet(file_path)
     logger.info(f"Saved {file_path.relative_to(DATA_DIR)}")
 
 
@@ -180,7 +191,8 @@ def load_merged_data(file_path: Path) -> pd.DataFrame:
 
 
 def final_dataset_path(model: str, scope: str, split: str = "full") -> Path:
-    return DATA_DIR / "final" / f"{model}_{scope}_{split}.parquet"
+    suffix = "csv" if model == "epf" else "parquet"
+    return DATA_DIR / "final" / f"{model}_{scope}_{split}.{suffix}"
 
 
 def load_final_dataset(
@@ -189,7 +201,7 @@ def load_final_dataset(
     split: str = "full",
     with_pca_features: bool = False,
 ) -> pd.DataFrame:
-    df = pd.read_parquet(final_dataset_path(model, scope, split))
+    df = read_frame(final_dataset_path(model, scope, split))
     if with_pca_features:
         return df
 
