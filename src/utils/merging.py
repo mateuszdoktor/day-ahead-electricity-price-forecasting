@@ -12,18 +12,31 @@ from src.config import (
     VAL_DATASET_END,
     VAL_DATASET_START,
 )
+from src.utils.feature_engineering.fe_trees import build_tree_features
 from src.utils.file_io import load_merged_data
 
-MODELS = ("trees", "nn", "epf")
-SCOPES = ("pl", "pl_foreign")
-DATASETS = [
-    (model, scope)
-    for model in MODELS
-    for scope in SCOPES
-    if not (model == "epf" and scope != "pl")
-]
+STEPS = ("d1", "d2", "d3")
 
-EPF_DROP = ["PL_price_lag24", "PL_price_lag48", "PL_price_lag168"]
+STEP_BLOCKS = {
+    "d1": [("entsoe", "d1"), ("investing_com", "d1")],
+    "d2": [("jao", "d2")],
+    "d3": [("entsoe", "d3"), ("jao", "d3")],
+}
+
+
+DATASETS = (
+    [("tft", step) for step in STEPS]
+    + [("trees", step) for step in STEPS]
+    + [("epf", "pl")]
+)
+
+EPF_COLUMNS = [
+    "PL_load_fc",
+    "PL_load_fc_delta24",
+    "PL_wind_fc_lag24",
+    "PL_solar_fc_lag24",
+    "PL_gen_fc_lag24",
+]
 
 SPLITS = {
     "full": (FULL_DATASET_START_DATE, FULL_DATASET_END_DATE),
@@ -33,33 +46,49 @@ SPLITS = {
 }
 
 
+def blocks_up_to(step: str) -> list[tuple[str, str]]:
+    if step not in STEPS:
+        raise KeyError(step)
+
+    return [
+        block for name in STEPS[: STEPS.index(step) + 1] for block in STEP_BLOCKS[name]
+    ]
+
+
 def merge_features(model: str, scope: str, date_range: str) -> pd.DataFrame:
     if (model, scope) not in DATASETS:
         raise KeyError((model, scope))
 
-    source = "nn" if model == "epf" else model
-    entsoe = load_merged_data(
-        DATA_DIR / "features" / "entsoe" / source / scope / f"{date_range}.parquet"
-    )
-    jao = load_merged_data(
-        DATA_DIR / "features" / "jao" / source / scope / f"{date_range}.parquet"
-    )
-    investing = load_merged_data(
-        DATA_DIR / "features" / "investing_com" / source / f"{date_range}.parquet"
-    )
+    step = "d1" if model == "epf" else scope
     price = load_merged_data(
         DATA_DIR / "preprocessed" / "entsoe" / date_range / "PL.parquet"
     )[["day_ahead_prices"]].rename(columns={"day_ahead_prices": "PL_price"})
+    blocks = [
+        load_merged_data(
+            DATA_DIR
+            / "features"
+            / source
+            / "tft"
+            / block_step
+            / f"{date_range}.parquet"
+        )
+        for source, block_step in blocks_up_to(step)
+    ]
 
-    df = pd.concat([price, entsoe, jao, investing], axis=1, join="inner").sort_index()
+    df = pd.concat([price, *blocks], axis=1, join="inner").sort_index()
+    if model == "trees":
+        df = build_tree_features(df, step)
     if model == "epf":
-        df = df.drop(columns=EPF_DROP)
+        df = df[["PL_price", *EPF_COLUMNS]].copy()
+        df["PL_gen_fc_balance"] = df["PL_gen_fc_lag24"] - (
+            df["PL_solar_fc_lag24"] + df["PL_load_fc_delta24"]
+        )
     return df
 
 
 def cut_to_dates(df: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
     if df.index.tz is None:
-        return df.loc[start : f"{end} 23:00"].copy()
+        return df.loc[start:f"{end} 23:00"].copy()
 
     local = df.index.tz_convert(LOCAL_TZ)
     start_local = pd.Timestamp(start, tz=LOCAL_TZ)
