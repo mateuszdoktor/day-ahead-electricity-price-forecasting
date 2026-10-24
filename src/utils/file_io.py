@@ -59,7 +59,7 @@ def load_investing_data(
 ) -> DataDict:
     data = {}
 
-    for file in data_dir.iterdir():
+    for file in sorted(data_dir.glob("*.csv")):
         df = pd.read_csv(file)
         df.index = pd.to_datetime(df["Date"], utc=True)
         data[file.stem] = df
@@ -199,11 +199,5 @@ def load_final_dataset(
     model: str,
     scope: str,
     split: str = "full",
-    with_pca_features: bool = False,
 ) -> pd.DataFrame:
-    df = read_frame(final_dataset_path(model, scope, split))
-    if with_pca_features:
-        return df
-
-    columns = [column for column in df.columns if "pca" in column.lower()]
-    return df.drop(columns=columns)
+    return read_frame(final_dataset_path(model, scope, split))

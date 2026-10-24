@@ -6,7 +6,8 @@ DataDict = dict[str, pd.DataFrame]
 
 MAX_INTERPOLATION_HOURS = 3
 WEATHER_DRIVEN_DATASETS = ["generation_wind_solar_forecast"]
-FORWARD_FILL_DATASETS = ["water_reservoirs_hydro_storage"]
+# No longer used: the reservoir datasets (AT, NO, SE) are not downloaded anymore.
+# FORWARD_FILL_DATASETS = ["water_reservoirs_hydro_storage"]
 
 
 def interpolate_short_gaps(
@@ -47,19 +48,21 @@ def preprocess_entsoe(data: dict[str, DataDict]) -> dict[str, DataDict]:
         code: convert_timezone(datasets, timezone="UTC")
         for code, datasets in data.items()
     }
-    end = max(
-        df.index.max()
-        for datasets in data.values()
-        for name, df in datasets.items()
-        if name not in FORWARD_FILL_DATASETS
-    )
+    # No longer used: only needed to extend the reservoir datasets (see above).
+    # end = max(
+    #     df.index.max()
+    #     for datasets in data.values()
+    #     for name, df in datasets.items()
+    #     if name not in FORWARD_FILL_DATASETS
+    # )
     return {
         code: {
-            name: (
-                extend_forward_fill(df, end)
-                if name in FORWARD_FILL_DATASETS
-                else preprocess_dataset(name, df)
-            )
+            name: preprocess_dataset(name, df)
+            # name: (
+            #     extend_forward_fill(df, end)
+            #     if name in FORWARD_FILL_DATASETS
+            #     else preprocess_dataset(name, df)
+            # )
             for name, df in datasets.items()
         }
         for code, datasets in data.items()

@@ -1,10 +1,11 @@
 import pandas as pd
 
-EXCLUDED_DATASETS = {
-    "generation_units_unavailability",
-    "production_units_unavailability",
-}
-EXCLUDED_DATE_GAPS = EXCLUDED_DATASETS | {"water_reservoirs_hydro_storage"}
+# No longer used: the unavailability and reservoir datasets are not downloaded anymore.
+# EXCLUDED_DATASETS = {
+#     "generation_units_unavailability",
+#     "production_units_unavailability",
+# }
+# EXCLUDED_DATE_GAPS = EXCLUDED_DATASETS | {"water_reservoirs_hydro_storage"}
 
 DAY_NAMES = [
     "Monday",
@@ -15,30 +16,31 @@ DAY_NAMES = [
     "Saturday",
     "Sunday",
 ]
-BUSINESS_TYPES = ["Planned maintenance", "Unplanned outage"]
-
-
-def _to_utc(data, column):
-    return pd.to_datetime(data[column], utc=True)
-
-
-def _group_consecutive_dates(dates):
-    ranges = []
-    start = previous = dates[0]
-
-    for current in dates[1:]:
-        if current != previous + pd.Timedelta(days=1):
-            ranges.append((start, previous))
-            start = current
-        previous = current
-
-    ranges.append((start, previous))
-    return ranges
-
-
-def _print_businesstype_counts(title, data, mask):
-    print(f"\n{title}")
-    print(data.loc[mask, "businesstype"].value_counts())
+# No longer used: helpers of the unavailability analysis below.
+# BUSINESS_TYPES = ["Planned maintenance", "Unplanned outage"]
+#
+#
+# def _to_utc(data, column):
+#     return pd.to_datetime(data[column], utc=True)
+#
+#
+# def _group_consecutive_dates(dates):
+#     ranges = []
+#     start = previous = dates[0]
+#
+#     for current in dates[1:]:
+#         if current != previous + pd.Timedelta(days=1):
+#             ranges.append((start, previous))
+#             start = current
+#         previous = current
+#
+#     ranges.append((start, previous))
+#     return ranges
+#
+#
+# def _print_businesstype_counts(title, data, mask):
+#     print(f"\n{title}")
+#     print(data.loc[mask, "businesstype"].value_counts())
 
 
 def print_missing_values(data, name):
@@ -72,8 +74,8 @@ def print_index_summary(data, name):
     print(f"Duplicates due to Summer/Winter time switch: {dst_duplicates}")
     print(f"Timezone:   {timezone_str}")
 
-    if name in EXCLUDED_DATASETS:
-        return
+    # if name in EXCLUDED_DATASETS:
+    #     return
 
     time_steps = index.to_series().diff().dropna().value_counts()
     if time_steps.empty:
@@ -114,8 +116,8 @@ def _group_consecutive_steps(missing, expected):
 
 
 def find_missing_dates(data, name, freq="h"):
-    if name in EXCLUDED_DATE_GAPS:
-        return set()
+    # if name in EXCLUDED_DATE_GAPS:
+    #     return set()
 
     expected = pd.date_range(start=data.index.min(), end=data.index.max(), freq=freq)
     missing = sorted(set(expected) - set(data.index))
@@ -143,52 +145,53 @@ def find_missing_dates(data, name, freq="h"):
     return set(missing)
 
 
-def print_units_unavailability_analysis(data):
-    data = data.copy()
-
-    print(f"Initial number of rows: {len(data)}")
-
-    duplicated_rows = data.duplicated(keep="first")
-    print(f"Duplicated rows: {duplicated_rows.sum()}")
-    data = data.drop_duplicates(keep="first")
-
-    duplicated_mrid_revision = data.duplicated(
-        subset=["mrid", "revision"], keep="first"
-    )
-    print(f"Duplicated (mrid, revision) rows: {duplicated_mrid_revision.sum()}")
-    data = data[~duplicated_mrid_revision].reset_index()
-
-    created_over_3_years_before_start = (
-        _to_utc(data, "start") - _to_utc(data, "created_doc_time")
-    ).dt.days > 3 * 365
-    _print_businesstype_counts(
-        "Rows with created_doc_time more than 3 years before start:",
-        data,
-        created_over_3_years_before_start,
-    )
-    data = data[~created_over_3_years_before_start]
-
-    created_on_or_after_end = _to_utc(data, "created_doc_time") >= _to_utc(data, "end")
-    _print_businesstype_counts(
-        "Rows with created_doc_time on or after end:",
-        data,
-        created_on_or_after_end,
-    )
-    data = data[~created_on_or_after_end]
-
-    print(f"\nFinal number of rows: {len(data)}")
-
-    created_doc_times = _to_utc(data, "created_doc_time")
-
-    for business_type in BUSINESS_TYPES:
-        doc_times = created_doc_times[data["businesstype"] == business_type]
-
-        print(f"\n{business_type}:")
-        print(f"Number of rows: {len(doc_times)}")
-
-        if doc_times.empty:
-            print("created_doc_time range: no data")
-        else:
-            print(f"created_doc_time range: {doc_times.min()} - {doc_times.max()}")
-
-    return data
+# No longer used: the unavailability data is not downloaded anymore.
+# def print_units_unavailability_analysis(data):
+#     data = data.copy()
+#
+#     print(f"Initial number of rows: {len(data)}")
+#
+#     duplicated_rows = data.duplicated(keep="first")
+#     print(f"Duplicated rows: {duplicated_rows.sum()}")
+#     data = data.drop_duplicates(keep="first")
+#
+#     duplicated_mrid_revision = data.duplicated(
+#         subset=["mrid", "revision"], keep="first"
+#     )
+#     print(f"Duplicated (mrid, revision) rows: {duplicated_mrid_revision.sum()}")
+#     data = data[~duplicated_mrid_revision].reset_index()
+#
+#     created_over_3_years_before_start = (
+#         _to_utc(data, "start") - _to_utc(data, "created_doc_time")
+#     ).dt.days > 3 * 365
+#     _print_businesstype_counts(
+#         "Rows with created_doc_time more than 3 years before start:",
+#         data,
+#         created_over_3_years_before_start,
+#     )
+#     data = data[~created_over_3_years_before_start]
+#
+#     created_on_or_after_end = _to_utc(data, "created_doc_time") >= _to_utc(data, "end")
+#     _print_businesstype_counts(
+#         "Rows with created_doc_time on or after end:",
+#         data,
+#         created_on_or_after_end,
+#     )
+#     data = data[~created_on_or_after_end]
+#
+#     print(f"\nFinal number of rows: {len(data)}")
+#
+#     created_doc_times = _to_utc(data, "created_doc_time")
+#
+#     for business_type in BUSINESS_TYPES:
+#         doc_times = created_doc_times[data["businesstype"] == business_type]
+#
+#         print(f"\n{business_type}:")
+#         print(f"Number of rows: {len(doc_times)}")
+#
+#         if doc_times.empty:
+#             print("created_doc_time range: no data")
+#         else:
+#             print(f"created_doc_time range: {doc_times.min()} - {doc_times.max()}")
+#
+#     return data

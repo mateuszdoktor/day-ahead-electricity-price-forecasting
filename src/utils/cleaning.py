@@ -8,24 +8,27 @@ logger = logging.getLogger(__name__)
 
 DataDict = dict[str, pd.DataFrame]
 
-UNAVAILABILITY_DATASETS = [
-    "generation_units_unavailability",
-    "production_units_unavailability",
-]
+# No longer used: the unavailability datasets are not downloaded anymore.
+# UNAVAILABILITY_DATASETS = [
+#     "generation_units_unavailability",
+#     "production_units_unavailability",
+# ]
 
 COUNTRY_CONFIG = {
-    "PL": {
-        "drop_gen_types": [
-            "Other renewable",
-            "Other",
-            "Hydro Pumped Storage - Actual Consumption",
-            "Wind Offshore",
-        ],
-        "drop_ws_forecast": ["Wind Offshore"],
-    },
-    "FR": {
-        "drop_ws_forecast": ["Wind Offshore"],
-    },
+    # No longer used: the PL columns below do not exist in the merged ranges (02b).
+    # "PL": {
+    #     "drop_gen_types": [
+    #         "Other renewable",
+    #         "Other",
+    #         "Hydro Pumped Storage - Actual Consumption",
+    #         "Wind Offshore",
+    #     ],
+    #     "drop_ws_forecast": ["Wind Offshore"],
+    # },
+    # No longer used: FR is not part of the dataset anymore.
+    # "FR": {
+    #     "drop_ws_forecast": ["Wind Offshore"],
+    # },
     "LT": {
         "datasets_to_remove": ["generation_forecast"],
     },
@@ -35,7 +38,8 @@ COUNTRY_CONFIG = {
 def _select_datasets(data: DataDict, datasets: list[str] | None) -> list[str]:
     if datasets is not None:
         return datasets
-    return [name for name in data if name not in UNAVAILABILITY_DATASETS]
+    # return [name for name in data if name not in UNAVAILABILITY_DATASETS]
+    return list(data)
 
 
 def drop_columns(
@@ -96,33 +100,37 @@ def convert_timezone(data: DataDict, timezone: str = "UTC") -> DataDict:
     return data
 
 
-def clean_pl(data: DataDict, cfg: dict = COUNTRY_CONFIG["PL"]) -> DataDict:
-    data = drop_columns(
-        data,
-        datasets=["generation", "generation_wind_solar_forecast"],
-        columns_list=[cfg["drop_gen_types"], cfg["drop_ws_forecast"]],
-    )
-    data = drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
-    data = drop_duplicate_index(data, datasets=["day_ahead_prices"], strategy="first")
-    return data
-
-
-def clean_de_lu(data: DataDict) -> DataDict:
-    return drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
+# No longer used: duplicated prices and the PL columns that are not reported in every
+# download range are handled when the ranges are merged (02b), and the unavailability
+# datasets are not downloaded anymore.
+# def clean_pl(data: DataDict, cfg: dict = COUNTRY_CONFIG["PL"]) -> DataDict:
+#     data = drop_columns(
+#         data,
+#         datasets=["generation", "generation_wind_solar_forecast"],
+#         columns_list=[cfg["drop_gen_types"], cfg["drop_ws_forecast"]],
+#     )
+#     data = drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
+#     data = drop_duplicate_index(data, datasets=["day_ahead_prices"], strategy="first")
+#     return data
+#
+#
+# def clean_de_lu(data: DataDict) -> DataDict:
+#     return drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
 
 
 def clean_lt(data: DataDict, cfg: dict = COUNTRY_CONFIG["LT"]) -> DataDict:
     return drop_datasets(data, datasets=cfg["datasets_to_remove"])
 
 
-def clean_fr(data: DataDict, cfg: dict = COUNTRY_CONFIG["FR"]) -> DataDict:
-    data = drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
-    data = drop_columns(
-        data,
-        datasets=["generation_wind_solar_forecast"],
-        columns_list=[cfg["drop_ws_forecast"]],
-    )
-    return data
+# No longer used: FR is not part of the dataset anymore.
+# def clean_fr(data: DataDict, cfg: dict = COUNTRY_CONFIG["FR"]) -> DataDict:
+#     data = drop_datasets(data, datasets=UNAVAILABILITY_DATASETS)
+#     data = drop_columns(
+#         data,
+#         datasets=["generation_wind_solar_forecast"],
+#         columns_list=[cfg["drop_ws_forecast"]],
+#     )
+#     return data
 
 
 # --- Investing.com ------------------------------
@@ -130,7 +138,7 @@ def clean_fr(data: DataDict, cfg: dict = COUNTRY_CONFIG["FR"]) -> DataDict:
 INVESTING_COM_DATASETS = [
     "dutch_ttf_natural_gas_futures",
     "rotterdam_coal_futures",
-    "german_power_baseload_futures",
+    # "german_power_baseload_futures",  # no longer used: not part of the dataset
     "eu_carbon_emissions_futures",
     "eur_pln",
 ]
