@@ -1,14 +1,20 @@
 import logging
 import os
+import random
+import time
 
 import pandas as pd
 from dotenv import load_dotenv
 from entsoe import EntsoePandasClient
 from entsoe.exceptions import NoMatchingDataError
+from requests.exceptions import HTTPError, RequestException
 
 from src.config import DATA_DIR
 
 logger = logging.getLogger(__name__)
+
+BASE_DELAY = 5
+MAX_DELAY = 300
 
 DATASETS = {
     "day_ahead_prices": ("query_day_ahead_prices", {}),
@@ -17,19 +23,45 @@ DATASETS = {
     "generation": ("query_generation", {}),
     "generation_forecast": ("query_generation_forecast", {}),
     "generation_wind_solar_forecast": ("query_wind_and_solar_forecast", {}),
-    "generation_units_unavailability": (
-        "query_unavailability_of_generation_units",
-        {"docstatus": "A05"},
-    ),
-    "production_units_unavailability": (
-        "query_unavailability_of_production_units",
-        {"docstatus": "A05"},
-    ),
     "water_reservoirs_hydro_storage": (
         "query_aggregate_water_reservoirs_and_hydro_storage",
         {},
     ),
 }
+
+
+def is_retryable(exc: RequestException) -> bool:
+    if isinstance(exc, HTTPError) and exc.response is not None:
+        status = exc.response.status_code
+        return status in (408, 429) or status >= 500
+    return True
+
+
+def with_retry(func, *args, **kwargs):
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            return func(*args, **kwargs)
+        except RequestException as exc:
+            if not is_retryable(exc):
+                raise
+            delay = min(BASE_DELAY * 2 ** min(attempt - 1, 10), MAX_DELAY)
+            delay += random.uniform(0, 1)
+            logger.warning(
+                f"Attempt {attempt} failed ({exc}); retrying in {delay:.0f}s"
+            )
+            time.sleep(delay)
+
+
+def get_data_dir(country_code: str, start_date: pd.Timestamp, end_date: pd.Timestamp):
+    return (
+        DATA_DIR
+        / "raw"
+        / "entsoe"
+        / country_code
+        / f"{start_date:%Y-%m-%d}_{end_date:%Y-%m-%d}"
+    )
 
 
 def save_data(
@@ -39,13 +71,7 @@ def save_data(
     start_date: pd.Timestamp,
     end_date: pd.Timestamp,
 ) -> None:
-    data_dir = (
-        DATA_DIR
-        / "raw"
-        / "entsoe"
-        / country_code
-        / f"{start_date:%Y-%m-%d}_{end_date:%Y-%m-%d}"
-    )
+    data_dir = get_data_dir(country_code, start_date, end_date)
     data_dir.mkdir(parents=True, exist_ok=True)
 
     file_path = data_dir / f"{name}.parquet"
@@ -107,6 +133,14 @@ class EntsoeClient:
         results = {}
 
         for i, name in enumerate(names, start=1):
+            cached = (
+                get_data_dir(country_code, start_date, end_date) / f"{name}.parquet"
+            )
+            if save_to_parquet and cached.exists():
+                results[name] = pd.read_parquet(cached)
+                logger.info(f"{name}: loaded from cache ({i}/{len(names)})")
+                continue
+
             method, kwargs = DATASETS[name]
             query = getattr(self.pandas_client, method)
 
@@ -122,7 +156,8 @@ class EntsoeClient:
                 logger.info(f"{name}: {month_start:%Y-%m-%d} -> {month_end:%Y-%m-%d}")
 
                 try:
-                    data = query(
+                    data = with_retry(
+                        query,
                         country_code=country_code,
                         start=month_start,
                         end=month_end,
