@@ -3,37 +3,39 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 
-DOWNLOAD_START_DATE = "2022-12-01"
-DOWNLOAD_END_DATE = "2026-09-16"
+DOWNLOAD_START_DATE = "2022-06-09"
+DOWNLOAD_END_DATE = "2026-10-21"
 
-# 194 weeks - 1358 days
-FULL_DATASET_START_DATE = "2022-12-26"
-FULL_DATASET_END_DATE = "2026-09-13"
+# 226 weeks - 1582 days
+FULL_DATASET_START_DATE = "2022-06-20"
+FULL_DATASET_END_DATE = "2026-10-18"
 
-# 105 weeks - 735 days
-TRAIN_DATASET_START = "2022-12-26"
-TRAIN_DATASET_END = "2024-12-29"
+# 156 weeks - 1092 days (3 years)
+TRAIN_DATASET_START = "2022-06-20"
+TRAIN_DATASET_END = "2025-06-15"
 
-# 35 weeks - 245 days
-VAL_DATASET_START = "2024-12-30"
-VAL_DATASET_END = "2025-08-31"
+# 18 weeks - 126 days
+VAL_DATASET_START = "2025-06-16"
+VAL_DATASET_END = "2025-10-19"
 
-# 54 weeks - 378 days
-TEST_DATASET_START = "2025-09-01"
-TEST_DATASET_END = "2026-09-13"
+# 52 weeks - 364 days (1 year)
+TEST_DATASET_START = "2025-10-20"
+TEST_DATASET_END = "2026-10-18"
 
 LOCAL_TZ = "Europe/Warsaw"
 
 ENTSOE_BIDDING_ZONE_CODES = [
-    "AT",
+    # "AT",
     "CZ",
     "DE_LU",
-    "FR",
-    "HU",
+    # "FR",
+    # "HU",
     "LT",
-    "NO",
+    # "NO",
     "PL",
-    "SE",
+    # "SE",
     "SE_4",
     "SK",
 ]
+
+EPF_EXOG = ["PL_gen_fc_balance", "PL_load_fc"]
