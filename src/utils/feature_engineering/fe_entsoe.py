@@ -15,11 +15,11 @@ LOAD_ZONES = {
 }
 
 SPREADS = {
-    "DE_LU": "spread_PL_DE_LU_lag24",
-    "CZ": "spread_PL_CZ_lag24",
-    "SK": "spread_PL_SK_lag24",
-    "SE_4": "spread_PL_SE4_lag24",
-    "LT": "spread_PL_LT_lag24",
+    "DE_LU": "spread_PL_DE_LU",
+    "CZ": "spread_PL_CZ",
+    "SK": "spread_PL_SK",
+    "SE_4": "spread_PL_SE4",
+    "LT": "spread_PL_LT",
 }
 
 TFT_D1 = [
@@ -28,18 +28,18 @@ TFT_D1 = [
     "PL_price_lag168",
     "PL_load_fc",
     "PL_load_fc_delta24",
-    "PL_wind_fc_lag24",
-    "PL_solar_fc_lag24",
-    "PL_gen_fc_lag24",
-    "PL_coal_gen_lag48",
+    "PL_wind_fc",
+    "PL_solar_fc",
+    "PL_gen_fc",
+    "PL_coal_gen_lag24",
 ]
 
 TFT_D3 = [
-    "spread_PL_DE_LU_lag24",
-    "spread_PL_CZ_lag24",
-    "spread_PL_SK_lag24",
-    "spread_PL_SE4_lag24",
-    "spread_PL_LT_lag24",
+    "spread_PL_DE_LU",
+    "spread_PL_CZ",
+    "spread_PL_SK",
+    "spread_PL_SE4",
+    "spread_PL_LT",
     "DE_load_fc",
     "CZ_load_fc",
     "SK_load_fc",
@@ -65,23 +65,23 @@ def calculate_pl_features(pl: pd.DataFrame) -> dict[str, pd.Series]:
         "PL_price_lag168": price.shift(168),
         "PL_load_fc": load_fc,
         "PL_load_fc_delta24": load_fc - load_fc.shift(24),
-        "PL_wind_fc_lag24": pl["generation_wind_solar_forecast_Wind_Onshore"].shift(24),
-        "PL_solar_fc_lag24": pl["generation_wind_solar_forecast_Solar"].shift(24),
-        "PL_gen_fc_lag24": pl["generation_forecast"].shift(24),
-        "PL_coal_gen_lag48": pl[COAL_COLUMNS].sum(axis=1, min_count=1).shift(48),
+        "PL_wind_fc": pl["generation_wind_solar_forecast_Wind_Onshore"],
+        "PL_solar_fc": pl["generation_wind_solar_forecast_Solar"],
+        "PL_gen_fc": pl["generation_forecast"],
+        "PL_coal_gen_lag24": pl[COAL_COLUMNS].sum(axis=1, min_count=1).shift(24),
     }
 
 
 def calculate_foreign_features(
     data: dict[str, pd.DataFrame],
-    pl_price_lag24: pd.Series,
+    pl_price: pd.Series,
 ) -> dict[str, pd.Series]:
-    index = pl_price_lag24.index
+    index = pl_price.index
     f = {}
 
     for zone, name in SPREADS.items():
-        foreign_price = data[zone]["day_ahead_prices"].shift(24).reindex(index)
-        f[name] = pl_price_lag24 - foreign_price
+        foreign_price = data[zone]["day_ahead_prices"].reindex(index)
+        f[name] = pl_price - foreign_price
 
     for zone, name in LOAD_ZONES.items():
         f[f"{name}_load_fc"] = data[zone]["load_forecast"].reindex(index)
@@ -99,7 +99,7 @@ def create_features(data_entsoe: dict[str, pd.DataFrame]) -> pd.DataFrame:
 
     pl = data["PL"]
     f = calculate_pl_features(pl)
-    f.update(calculate_foreign_features(data, f["PL_price_lag24"]))
+    f.update(calculate_foreign_features(data, pl["day_ahead_prices"]))
 
     features = pd.DataFrame(f, index=pl.index)
     features = features.replace([float("inf"), float("-inf")], float("nan"))

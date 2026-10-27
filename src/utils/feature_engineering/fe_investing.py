@@ -7,13 +7,13 @@ SOURCES = {
     "eurpln": "eur_pln",
 }
 
-LAG = 48
+LAG = 24
 
 TFT_D1 = [
-    "ttf_lag48",
-    "eua_lag48",
-    "coal_lag48",
-    "eurpln_lag48",
+    "ttf_lag24",
+    "eua_lag24",
+    "coal_lag24",
+    "eurpln_lag24",
 ]
 
 COLUMNS = {
@@ -25,7 +25,7 @@ COLUMNS = {
 
 def create_all_features(df: pd.DataFrame) -> pd.DataFrame:
     features = pd.DataFrame(
-        {f"{name}_lag48": df[source].shift(LAG) for name, source in SOURCES.items()},
+        {f"{name}_lag24": df[source].shift(LAG) for name, source in SOURCES.items()},
         index=df.index,
     )
 

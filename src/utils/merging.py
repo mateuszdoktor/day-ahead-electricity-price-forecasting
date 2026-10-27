@@ -12,7 +12,7 @@ from src.config import (
     VAL_DATASET_END,
     VAL_DATASET_START,
 )
-from src.utils.feature_engineering.fe_trees import build_tree_features
+from src.utils.feature_engineering.fe_trees import build_tree_features, shift_unknown
 from src.utils.file_io import load_merged_data
 
 STEPS = ("d1", "d2", "d3")
@@ -79,7 +79,7 @@ def merge_features(model: str, scope: str, date_range: str) -> pd.DataFrame:
     if model == "trees":
         df = build_tree_features(df, step)
     if model == "epf":
-        df = df[["PL_price", *EPF_COLUMNS]].copy()
+        df = shift_unknown(df)[["PL_price", *EPF_COLUMNS]].copy()
         df["PL_gen_fc_balance"] = df["PL_gen_fc_lag24"] - (
             df["PL_solar_fc_lag24"] + df["PL_load_fc_delta24"]
         )

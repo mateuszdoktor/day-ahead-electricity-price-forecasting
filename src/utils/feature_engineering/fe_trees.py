@@ -3,8 +3,33 @@ import pandas as pd
 from src.config import LOCAL_TZ
 
 CHANGE_SOURCES = ("ttf", "eua", "coal", "eurpln")
+SHIFT = 24
+
+UNKNOWN_COLUMNS = {
+    "PL_wind_fc": "PL_wind_fc_lag24",
+    "PL_solar_fc": "PL_solar_fc_lag24",
+    "PL_gen_fc": "PL_gen_fc_lag24",
+    "PL_coal_gen_lag24": "PL_coal_gen_lag48",
+    "ttf_lag24": "ttf_lag48",
+    "eua_lag24": "eua_lag48",
+    "coal_lag24": "coal_lag48",
+    "eurpln_lag24": "eurpln_lag48",
+    "spread_PL_DE_LU": "spread_PL_DE_LU_lag24",
+    "spread_PL_CZ": "spread_PL_CZ_lag24",
+    "spread_PL_SK": "spread_PL_SK_lag24",
+    "spread_PL_SE4": "spread_PL_SE4_lag24",
+    "spread_PL_LT": "spread_PL_LT_lag24",
+}
 DELTA_COLUMNS = ("np_PL", "gen_PL", "vload_PL")
 WINDOW = 24 * 7
+
+
+def shift_unknown(df: pd.DataFrame) -> pd.DataFrame:
+    columns = {c: n for c, n in UNKNOWN_COLUMNS.items() if c in df.columns}
+    out = df.copy()
+    out[list(columns)] = df[list(columns)].shift(SHIFT)
+
+    return out.rename(columns=columns)
 
 
 def previous_day(daily: pd.Series, index: pd.DatetimeIndex) -> pd.Series:
@@ -52,8 +77,7 @@ def calculate_market_coupling_features(df: pd.DataFrame) -> dict[str, pd.Series]
 
 
 def build_tree_features(tft: pd.DataFrame, step: str) -> pd.DataFrame:
-    """Add tree-friendly columns to a TFT frame (UTC index, no calendar columns)."""
-    df = tft.tz_convert(LOCAL_TZ)
+    df = shift_unknown(tft).tz_convert(LOCAL_TZ)
 
     f = calculate_poland_features(df)
     if step != "d1":
