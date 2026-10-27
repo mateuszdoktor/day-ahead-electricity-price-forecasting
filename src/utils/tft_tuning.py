@@ -102,11 +102,9 @@ def make_datasets(df, known, unknown, val_start, enc_len):
 def objective(trial, df, known, unknown, val_start):
     pl.seed_everything(SEED, workers=True)
 
-    enc_len = trial.suggest_categorical(
-        "max_encoder_length", [24, 48, 72, 168, 336, 672]
-    )
+    enc_len = trial.suggest_categorical("max_encoder_length", [24, 48, 72, 168])
     training, validation = make_datasets(df, known, unknown, val_start, enc_len)
-    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128])
+    batch_size = trial.suggest_categorical("batch_size", [64, 128, 256])
     clip = trial.suggest_float("gradient_clip_val", 0.01, 10.0, log=True)
     model = TemporalFusionTransformer.from_dataset(
         training,
