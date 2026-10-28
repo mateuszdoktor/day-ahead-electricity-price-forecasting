@@ -119,7 +119,6 @@ def objective(trial, df, known, unknown, val_start):
     validation = TimeSeriesDataSet.from_dataset(
         training, df, min_prediction_idx=val_start, stop_randomization=True
     )
-    batch_size = trial.suggest_categorical("batch_size", [64, 128, 256])
     clip = trial.suggest_float("gradient_clip_val", 0.01, 10.0, log=True)
     model = make_model(
         training,
@@ -136,12 +135,12 @@ def objective(trial, df, known, unknown, val_start):
         learning_rate=trial.suggest_float("learning_rate", 1e-4, 3e-2, log=True),
     )
     train_dl = training.to_dataloader(
-        train=True, batch_size=batch_size, num_workers=NUM_WORKERS
+        train=True, batch_size=256, num_workers=NUM_WORKERS
     )
 
     val_dl = validation.to_dataloader(
         train=False,
-        batch_size=batch_size,
+        batch_size=256,
         num_workers=NUM_WORKERS,
         sampler=range(0, len(validation), 24),
     )
