@@ -103,7 +103,7 @@ def make_training_dataset(df, known, unknown, enc_len):
 def make_model(training, **params):
     return TemporalFusionTransformer.from_dataset(
         training,
-        loss=QuantileLoss(quantiles=[0.1, 0.5, 0.9]),
+        loss=QuantileLoss(quantiles=[0.5]),
         reduce_on_plateau_patience=3,
         **params,
     )
