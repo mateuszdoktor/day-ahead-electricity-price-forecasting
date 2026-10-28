@@ -12,7 +12,7 @@ from lightning.pytorch.callbacks import EarlyStopping
 from optuna_integration import PyTorchLightningPruningCallback
 from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
 from pytorch_forecasting.data import GroupNormalizer
-from pytorch_forecasting.metrics import QuantileLoss
+from pytorch_forecasting.metrics import MAE, QuantileLoss
 
 from src.config import BASE_DIR
 from src.utils.file_io import load_final_dataset
@@ -102,7 +102,10 @@ def make_training_dataset(df, known, unknown, enc_len):
 
 def make_model(training, **params):
     return TemporalFusionTransformer.from_dataset(
-        training, loss=QuantileLoss(), reduce_on_plateau_patience=3, **params
+        training,
+        loss=QuantileLoss(quantiles=[0.1, 0.5, 0.9]),
+        reduce_on_plateau_patience=3,
+        **params,
     )
 
 
@@ -110,7 +113,9 @@ def objective(trial, df, known, unknown, val_start):
     pl.seed_everything(SEED, workers=True)
 
     enc_len = trial.suggest_categorical("max_encoder_length", [24, 48, 72, 168])
-    training = make_training_dataset(df[df.time_idx < val_start], known, unknown, enc_len)
+    training = make_training_dataset(
+        df[df.time_idx < val_start], known, unknown, enc_len
+    )
     validation = TimeSeriesDataSet.from_dataset(
         training, df, min_prediction_idx=val_start, stop_randomization=True
     )
@@ -118,6 +123,7 @@ def objective(trial, df, known, unknown, val_start):
     clip = trial.suggest_float("gradient_clip_val", 0.01, 10.0, log=True)
     model = make_model(
         training,
+        logging_metrics=[MAE()],
         hidden_size=trial.suggest_categorical("hidden_size", [16, 32, 64, 128]),
         hidden_continuous_size=trial.suggest_categorical(
             "hidden_continuous_size", [8, 16, 32, 64]
@@ -140,7 +146,7 @@ def objective(trial, df, known, unknown, val_start):
         sampler=range(0, len(validation), 24),
     )
 
-    early_stop = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=ES_PATIENCE)
+    early_stop = EarlyStopping(monitor="val_MAE", min_delta=1e-4, patience=ES_PATIENCE)
     trainer = pl.Trainer(
         max_epochs=MAX_EPOCHS,
         accelerator="auto",
@@ -148,7 +154,7 @@ def objective(trial, df, known, unknown, val_start):
         gradient_clip_val=clip,
         callbacks=[
             early_stop,
-            PyTorchLightningPruningCallback(trial, monitor="val_loss"),
+            PyTorchLightningPruningCallback(trial, monitor="val_MAE"),
         ],
         logger=False,
         enable_checkpointing=False,
@@ -184,7 +190,7 @@ def main():
         direction="minimize",
         pruner=optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=4),
     )
-    study.set_metric_names(["val_loss"])
+    study.set_metric_names(["val_MAE"])
     study.optimize(
         lambda trial: objective(trial, df, known, unknown, val_start),
         n_trials=args.trials,

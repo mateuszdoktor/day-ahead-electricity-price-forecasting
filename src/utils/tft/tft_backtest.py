@@ -32,7 +32,7 @@ def main():
         num_workers=NUM_WORKERS,
         sampler=range(0, len(dataset), 24),
     )
-    pred = model.predict(dataloader, mode="prediction")
+    pred = model.predict(dataloader, mode="quantiles")
 
     forecast = pd.DataFrame({"Pred": pred.cpu().numpy().reshape(-1)}, index=test.index)
     path = (
