@@ -1,6 +1,4 @@
 # Usage: python -m src.utils.tft.tft_training --step d1
-# Trains TFT with the best hyperparameters from results/tft/{step}/best.json
-# Saves the model to results/tft/{step}/model.ckpt
 
 import argparse
 import json
@@ -29,7 +27,6 @@ def main():
     best = json.loads((out_dir / "best.json").read_text())
     params = dict(best["best_params"])
     enc_len = params.pop("max_encoder_length")
-    batch_size = params.pop("batch_size")
     clip = params.pop("gradient_clip_val")
 
     pl.seed_everything(SEED, workers=True)
@@ -40,7 +37,7 @@ def main():
 
     training = make_training_dataset(df, known, unknown, enc_len)
     train_dl = training.to_dataloader(
-        train=True, batch_size=batch_size, num_workers=NUM_WORKERS
+        train=True, batch_size=256, num_workers=NUM_WORKERS
     )
     model = make_model(training, **params)
 

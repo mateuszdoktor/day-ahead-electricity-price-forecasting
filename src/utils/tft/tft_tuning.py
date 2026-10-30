@@ -26,11 +26,9 @@ ES_PATIENCE = 5
 NUM_WORKERS = 4
 SEED = 42
 
-KNOWN_CATEGORICALS = ["hour", "dow", "month"]
+KNOWN_CATEGORICALS = ["hour", "dow", "month", "is_holiday", "is_bridge"]
 KNOWN_REALS = [
     # D1
-    "is_holiday",
-    "is_bridge",
     "PL_price_lag24",
     "PL_price_lag48",
     "PL_price_lag168",

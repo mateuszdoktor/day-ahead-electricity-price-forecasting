@@ -1,8 +1,9 @@
 # Usage: python -m src.utils.tft.tft_backtest --step d1
-# Backtest of the model from results/tft/{step}/model.ckpt on the test split.
+
 import argparse
 
 import pandas as pd
+import torch
 from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
 
 from src.config import BASE_DIR
@@ -32,14 +33,23 @@ def main():
         num_workers=NUM_WORKERS,
         sampler=range(0, len(dataset), 24),
     )
-    pred = model.predict(dataloader, mode="prediction")
+    name = f"TFT_{args.step.upper()}"
 
+    # Point forecast
+    pred = model.predict(dataloader, mode="prediction")
     forecast = pd.DataFrame({"Pred": pred.cpu().numpy().reshape(-1)}, index=test.index)
-    path = (
-        BASE_DIR / "results" / "tft" / "test" / "full" / f"TFT_{args.step.upper()}.csv"
-    )
+    path = BASE_DIR / "results" / "tft" / "test" / "full" / f"{name}.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     forecast.to_csv(path)
+
+    # Raw output
+    result = model.predict(dataloader, mode="raw", return_x=True)
+    interpretation = model.interpret_output(result.output, reduction="mean")
+    out_dir = BASE_DIR / "results" / "tft" / "test" / "interpretation"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    torch.save(interpretation, out_dir / f"{name}_interpretation.pt")
+    torch.save(result.output, out_dir / f"{name}_raw_output.pt")
+    torch.save(result.x, out_dir / f"{name}_x.pt")
 
 
 if __name__ == "__main__":

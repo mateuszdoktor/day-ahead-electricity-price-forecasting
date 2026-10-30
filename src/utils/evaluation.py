@@ -2,12 +2,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from epftoolbox.evaluation import MAE, RMSE, rMAE
+from epftoolbox.evaluation import MAE, RMSE, rMAE, sMAPE
 
 _METRICS = {
     "MAE": MAE,
     "RMSE": RMSE,
     "rMAE": lambda real, pred: rMAE(real, pred, m="W"),
+    "sMAPE": sMAPE,
 }
 
 
