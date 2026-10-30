@@ -9,3 +9,5 @@ data/**/*
 .vscode
 
 results/
+
+lighting_logs/
