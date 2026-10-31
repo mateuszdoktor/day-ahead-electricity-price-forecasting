@@ -23,7 +23,7 @@ GROUP = "series"
 PRED_LEN = 24
 MAX_EPOCHS = 30
 ES_PATIENCE = 5
-NUM_WORKERS = 4
+NUM_WORKERS = 2
 SEED = 42
 
 KNOWN_CATEGORICALS = ["hour", "dow", "month", "is_holiday", "is_bridge"]
@@ -76,6 +76,7 @@ def load_data(step):
     known = [c for c in KNOWN_REALS if c in df.columns]
     skip = {"time_idx", GROUP, *KNOWN_CATEGORICALS, *known}
     unknown = [c for c in df.columns if c not in skip]
+
     return df, known, unknown, val["time_idx"].min()
 
 
@@ -103,6 +104,7 @@ def make_model(training, **params):
         training,
         loss=QuantileLoss(quantiles=[0.5]),
         reduce_on_plateau_patience=3,
+        optimizer="adamw",
         **params,
     )
 
@@ -111,39 +113,52 @@ def objective(trial, df, known, unknown, val_start):
     pl.seed_everything(SEED, workers=True)
 
     enc_len = trial.suggest_categorical("max_encoder_length", [24, 48, 72, 168])
+
     training = make_training_dataset(
         df[df.time_idx < val_start], known, unknown, enc_len
     )
+
     validation = TimeSeriesDataSet.from_dataset(
         training, df, min_prediction_idx=val_start, stop_randomization=True
     )
-    clip = trial.suggest_float("gradient_clip_val", 0.01, 10.0, log=True)
+
+    clip = trial.suggest_float("gradient_clip_val", 0.01, 1.0, log=True)
+
+    weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True)
+
+    hidden_size = trial.suggest_categorical("hidden_size", [16, 32, 64, 128])
+
+    hidden_continuous_ratio = trial.suggest_categorical(
+        "hidden_continuous_size_ratio", [0.25, 0.5, 1.0]
+    )
+
+    hidden_continuous_size = max(8, int(hidden_size * hidden_continuous_ratio))
+
     model = make_model(
         training,
         logging_metrics=[MAE()],
-        hidden_size=trial.suggest_categorical("hidden_size", [16, 32, 64, 128]),
-        hidden_continuous_size=trial.suggest_categorical(
-            "hidden_continuous_size", [8, 16, 32, 64]
-        ),
-        attention_head_size=trial.suggest_categorical(
-            "attention_head_size", [1, 2, 4, 6]
-        ),
-        lstm_layers=trial.suggest_int("lstm_layers", 1, 4),
-        dropout=trial.suggest_float("dropout", 0.05, 0.4),
-        learning_rate=trial.suggest_float("learning_rate", 1e-4, 3e-2, log=True),
+        weight_decay=weight_decay,
+        hidden_size=hidden_size,
+        hidden_continuous_size=hidden_continuous_size,
+        attention_head_size=trial.suggest_categorical("attention_head_size", [1, 2, 4]),
+        lstm_layers=trial.suggest_int("lstm_layers", 1, 3),
+        dropout=trial.suggest_float("dropout", 0.05, 0.5),
+        learning_rate=trial.suggest_float("learning_rate", 1e-4, 5e-3, log=True),
     )
+
     train_dl = training.to_dataloader(
-        train=True, batch_size=256, num_workers=NUM_WORKERS
+        train=True, batch_size=128, num_workers=NUM_WORKERS
     )
 
     val_dl = validation.to_dataloader(
         train=False,
-        batch_size=256,
+        batch_size=128,
         num_workers=NUM_WORKERS,
         sampler=range(0, len(validation), 24),
     )
 
     early_stop = EarlyStopping(monitor="val_MAE", min_delta=1e-4, patience=ES_PATIENCE)
+
     trainer = pl.Trainer(
         max_epochs=MAX_EPOCHS,
         accelerator="auto",
@@ -158,13 +173,18 @@ def objective(trial, df, known, unknown, val_start):
         enable_progress_bar=True,
         enable_model_summary=False,
         num_sanity_val_steps=0,
+        precision="bf16-mixed",
     )
+
     trainer.fit(model, train_dl, val_dl)
 
     score = early_stop.best_score.item()
+
     if not math.isfinite(score):
         raise optuna.TrialPruned("non-finite val_loss")
+
     trial.set_user_attr("epochs_to_best", trainer.current_epoch - early_stop.wait_count)
+
     return score
 
 
@@ -176,6 +196,7 @@ def main():
 
     out_dir = BASE_DIR / "results" / "tft" / args.step
     out_dir.mkdir(parents=True, exist_ok=True)
+
     torch.set_float32_matmul_precision("high")
 
     df, known, unknown, val_start = load_data(args.step)
@@ -187,7 +208,9 @@ def main():
         direction="minimize",
         pruner=optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=4),
     )
+
     study.set_metric_names(["val_MAE"])
+
     study.optimize(
         lambda trial: objective(trial, df, known, unknown, val_start),
         n_trials=args.trials,
@@ -196,6 +219,7 @@ def main():
     )
 
     best = study.best_trial
+
     info = {
         "step": args.step,
         "best_value": best.value,
@@ -208,6 +232,7 @@ def main():
         "known_reals": known,
         "unknown_reals": unknown,
     }
+
     (out_dir / "best.json").write_text(json.dumps(info, indent=2))
     print(json.dumps(info, indent=2))
 
