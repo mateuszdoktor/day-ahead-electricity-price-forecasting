@@ -21,8 +21,8 @@ TARGET = "PL_price"
 GROUP = "series"
 
 PRED_LEN = 24
-MAX_EPOCHS = 30
-ES_PATIENCE = 5
+MAX_EPOCHS = 40
+ES_PATIENCE = 8
 NUM_WORKERS = 2
 SEED = 42
 
@@ -112,7 +112,7 @@ def make_model(training, **params):
 def objective(trial, df, known, unknown, val_start):
     pl.seed_everything(SEED, workers=True)
 
-    enc_len = trial.suggest_categorical("max_encoder_length", [24, 48, 72, 168])
+    enc_len = trial.suggest_categorical("max_encoder_length", [24, 48, 72])
 
     training = make_training_dataset(
         df[df.time_idx < val_start], known, unknown, enc_len
@@ -128,21 +128,17 @@ def objective(trial, df, known, unknown, val_start):
 
     hidden_size = trial.suggest_categorical("hidden_size", [16, 32, 64, 128])
 
-    hidden_continuous_ratio = trial.suggest_categorical(
-        "hidden_continuous_size_ratio", [0.25, 0.5, 1.0]
-    )
-
-    hidden_continuous_size = max(8, int(hidden_size * hidden_continuous_ratio))
+    hidden_continous_size = hidden_size // 2
 
     model = make_model(
         training,
         logging_metrics=[MAE()],
         weight_decay=weight_decay,
         hidden_size=hidden_size,
-        hidden_continuous_size=hidden_continuous_size,
+        hidden_continuous_size=hidden_continous_size,
         attention_head_size=trial.suggest_categorical("attention_head_size", [1, 2, 4]),
-        lstm_layers=trial.suggest_int("lstm_layers", 1, 3),
-        dropout=trial.suggest_float("dropout", 0.05, 0.5),
+        lstm_layers=trial.suggest_categorical("lstm_layers", [1, 2, 3]),
+        dropout=trial.suggest_float("dropout", 0.05, 0.4),
         learning_rate=trial.suggest_float("learning_rate", 1e-4, 5e-3, log=True),
     )
 
@@ -157,7 +153,7 @@ def objective(trial, df, known, unknown, val_start):
         sampler=range(0, len(validation), 24),
     )
 
-    early_stop = EarlyStopping(monitor="val_MAE", min_delta=1e-4, patience=ES_PATIENCE)
+    early_stop = EarlyStopping(monitor="val_MAE", min_delta=0.1, patience=ES_PATIENCE)
 
     trainer = pl.Trainer(
         max_epochs=MAX_EPOCHS,
@@ -173,7 +169,6 @@ def objective(trial, df, known, unknown, val_start):
         enable_progress_bar=True,
         enable_model_summary=False,
         num_sanity_val_steps=0,
-        precision="bf16-mixed",
     )
 
     trainer.fit(model, train_dl, val_dl)
@@ -206,7 +201,10 @@ def main():
         storage=f"sqlite:///{out_dir / 'study.db'}",
         load_if_exists=True,
         direction="minimize",
-        pruner=optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=4),
+        sampler=optuna.samplers.TPESampler(n_startup_trials=60, multivariate=True),
+        pruner=optuna.pruners.MedianPruner(
+            n_startup_trials=30, n_warmup_steps=10, n_min_trials=5
+        ),
     )
 
     study.set_metric_names(["val_MAE"])
