@@ -36,14 +36,33 @@ def trial_by_number(trials, number):
     raise SystemExit(f"trial {number} is not in top5.json (have {numbers})")
 
 
+def saveable_raw(raw):
+    data = raw._asdict() if hasattr(raw, "_asdict") else dict(raw)
+    return {
+        key: value.detach().cpu() if torch.is_tensor(value) else value
+        for key, value in data.items()
+    }
+
+
 def forecast_seeds(
-    train_df, pred_df, known, unknown, trial, pred_start, index, out_path
+    train_df,
+    pred_df,
+    known,
+    unknown,
+    trial,
+    pred_start,
+    index,
+    out_path,
+    save_dir=None,
 ):
     params = dict(trial["params"])
     enc_len = params.pop("max_encoder_length")
     clip = params.pop("gradient_clip_val")
     params["hidden_continuous_size"] = params["hidden_size"] // 2
     epochs = int(trial["epochs_to_best"])
+
+    if save_dir is not None:
+        save_dir.mkdir(parents=True, exist_ok=True)
 
     forecasts = {}
     for seed in SEEDS:
@@ -84,6 +103,17 @@ def forecast_seeds(
                 f"forecast length {len(pred)} != index length {len(index)}"
             )
         forecasts[seed] = pred
+        if save_dir is not None:
+            torch.save(
+                {
+                    "raw": saveable_raw(model.predict(loader, mode="raw")),
+                    "max_encoder_length": model.hparams.max_encoder_length,
+                    "static_variables": model.static_variables,
+                    "encoder_variables": model.encoder_variables,
+                    "decoder_variables": model.decoder_variables,
+                },
+                save_dir / f"{seed}.pt",
+            )
 
         del model, trainer, train_dl, dataset, loader
         gc.collect()
@@ -93,6 +123,8 @@ def forecast_seeds(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(forecasts, index=index).to_csv(out_path)
     print(f"saved {out_path}")
+    if save_dir is not None:
+        print(f"saved {save_dir}")
 
 
 def main():

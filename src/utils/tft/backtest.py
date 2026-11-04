@@ -1,4 +1,5 @@
 # Usage: python -m src.utils.tft.tft_backtest --step d1 --trial 114
+# Per seed: results/tft/d1/test/trial_114/{1,2,3,4,5}.pt
 
 import argparse
 
@@ -43,6 +44,7 @@ def main():
         test["time_idx"].min(),
         test.index,
         path,
+        save_dir=path.parent / path.stem,
     )
 
 
