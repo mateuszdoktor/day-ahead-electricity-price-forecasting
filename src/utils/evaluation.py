@@ -52,6 +52,15 @@ def as_daily_inputs(prices, forecasts):
     return p_real, pred_df
 
 
+def seed_table(scores, step, seeds=("1", "2", "3", "4", "5")):
+    return (
+        scores.loc[scores["step"] == step]
+        .sort_values("mean")
+        .set_index("trial")[list(seeds)]
+        .round(3)
+    )
+
+
 def load_forecasts(paths):
     frames = []
     for path in paths:
