@@ -1,5 +1,5 @@
-# Usage: python -m src.utils.tft.tft_validate --step d1
-#        python -m src.utils.tft.tft_validate --step d1 --trial 114
+# Usage: python -m src.utils.tft.validate --step d1
+#        python -m src.utils.tft.validate --step d1 --trial 114
 
 import argparse
 import gc
@@ -12,7 +12,8 @@ from pytorch_forecasting import TimeSeriesDataSet
 
 from src.config import BASE_DIR
 from src.utils.file_io import load_final_dataset
-from src.utils.tft.tft_tuning import (
+from src.utils.tft.tuning import (
+    ENCODER_LENGTH,
     NUM_WORKERS,
     load_data,
     make_model,
@@ -56,7 +57,8 @@ def forecast_seeds(
     save_dir=None,
 ):
     params = dict(trial["params"])
-    enc_len = params.pop("max_encoder_length")
+    params.pop("max_encoder_length", None)
+    enc_len = ENCODER_LENGTH
     clip = params.pop("gradient_clip_val")
     params["hidden_continuous_size"] = params["hidden_size"] // 2
     epochs = int(trial["epochs_to_best"])

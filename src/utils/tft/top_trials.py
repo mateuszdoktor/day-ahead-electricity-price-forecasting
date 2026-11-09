@@ -1,4 +1,4 @@
-# Usage: python -m src.utils.tft.tft_top_trials --step d1
+# Usage: python -m src.utils.tft.top_trials --step d1
 
 import argparse
 import json

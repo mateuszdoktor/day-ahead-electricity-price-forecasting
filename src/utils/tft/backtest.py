@@ -1,4 +1,4 @@
-# Usage: python -m src.utils.tft.tft_backtest --step d1 --trial 114
+# Usage: python -m src.utils.tft.backtest --step d1 --trial 114
 # Per seed: results/tft/d1/test/trial_114/{1,2,3,4,5}.pt
 
 import argparse
@@ -7,8 +7,8 @@ import torch
 
 from src.config import BASE_DIR
 from src.utils.file_io import load_final_dataset
-from src.utils.tft.tft_tuning import load_data, prepare
-from src.utils.tft.tft_validate import forecast_seeds, load_top_trials, trial_by_number
+from src.utils.tft.tuning import load_data, prepare
+from src.utils.tft.validate import forecast_seeds, load_top_trials, trial_by_number
 
 TRAIN_DAYS = 3 * 364
 
