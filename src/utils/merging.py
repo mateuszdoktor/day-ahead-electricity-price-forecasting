@@ -27,16 +27,8 @@ STEP_BLOCKS = {
 DATASETS = (
     [("tft", step) for step in STEPS]
     + [("trees", step) for step in STEPS]
-    + [("epf", "pl")]
+    + [("base", "pl")]
 )
-
-EPF_COLUMNS = [
-    "PL_load_fc",
-    "PL_load_fc_delta24",
-    "PL_wind_fc_lag24",
-    "PL_solar_fc_lag24",
-    "PL_gen_fc_lag24",
-]
 
 SPLITS = {
     "full": (FULL_DATASET_START_DATE, FULL_DATASET_END_DATE),
@@ -55,11 +47,22 @@ def blocks_up_to(step: str) -> list[tuple[str, str]]:
     ]
 
 
+def build_base_features(df: pd.DataFrame) -> pd.DataFrame:
+    lagged = shift_unknown(df)
+    out = df[["PL_price", "PL_load_fc"]].copy()
+    out["PL_resload_lag24"] = (
+        df["PL_load_fc"].shift(24)
+        - lagged["PL_solar_fc_lag24"]
+        - lagged["PL_wind_fc_lag24"]
+    )
+    return out
+
+
 def merge_features(model: str, scope: str, date_range: str) -> pd.DataFrame:
     if (model, scope) not in DATASETS:
         raise KeyError((model, scope))
 
-    step = "d1" if model == "epf" else scope
+    step = "d1" if model == "base" else scope
     price = load_merged_data(
         DATA_DIR / "preprocessed" / "entsoe" / date_range / "PL.parquet"
     )[["day_ahead_prices"]].rename(columns={"day_ahead_prices": "PL_price"})
@@ -78,11 +81,8 @@ def merge_features(model: str, scope: str, date_range: str) -> pd.DataFrame:
     df = pd.concat([price, *blocks], axis=1, join="inner").sort_index()
     if model == "trees":
         df = build_tree_features(df, step)
-    if model == "epf":
-        df = shift_unknown(df)[["PL_price", *EPF_COLUMNS]].copy()
-        df["PL_gen_fc_balance"] = df["PL_gen_fc_lag24"] - (
-            df["PL_solar_fc_lag24"] + df["PL_load_fc_delta24"]
-        )
+    if model == "base":
+        df = build_base_features(df)
     return df
 
 

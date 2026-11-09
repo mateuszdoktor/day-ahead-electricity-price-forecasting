@@ -191,7 +191,7 @@ def load_merged_data(file_path: Path) -> pd.DataFrame:
 
 
 def final_dataset_path(model: str, scope: str, split: str = "full") -> Path:
-    suffix = "csv" if model == "epf" else "parquet"
+    suffix = "csv" if model == "base" else "parquet"
     return DATA_DIR / "final" / f"{model}_{scope}_{split}.{suffix}"
 
 

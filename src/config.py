@@ -38,4 +38,4 @@ ENTSOE_BIDDING_ZONE_CODES = [
     "SK",
 ]
 
-EPF_EXOG = ["PL_gen_fc_balance", "PL_load_fc"]
+BASE_EXOG = ["PL_load_fc", "PL_resload_lag24"]

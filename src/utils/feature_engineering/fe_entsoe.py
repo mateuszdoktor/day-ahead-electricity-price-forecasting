@@ -25,6 +25,7 @@ SPREADS = {
 TFT_D1 = [
     "PL_price_lag24",
     "PL_price_lag48",
+    "PL_price_lag72",
     "PL_price_lag168",
     "PL_load_fc",
     "PL_load_fc_delta24",
@@ -62,6 +63,7 @@ def calculate_pl_features(pl: pd.DataFrame) -> dict[str, pd.Series]:
     return {
         "PL_price_lag24": price.shift(24),
         "PL_price_lag48": price.shift(48),
+        "PL_price_lag72": price.shift(72),
         "PL_price_lag168": price.shift(168),
         "PL_load_fc": load_fc,
         "PL_load_fc_delta24": load_fc - load_fc.shift(24),
