@@ -20,11 +20,11 @@ TARGET = "PL_price"
 GROUP = "series"
 
 PRED_LEN = 24
-ENCODER_LENGTH = 168
+ENCODER_LENGTH = 72
 MAX_EPOCHS = 40
-ES_PATIENCE = 10
+ES_PATIENCE = 6
 WINDOW = 3
-NUM_WORKERS = 2
+NUM_WORKERS = 8
 SEED = 42
 
 KNOWN_CATEGORICALS = ["hour", "dow", "month", "is_holiday", "is_bridge"]
@@ -189,12 +189,12 @@ def objective(trial, df, known, unknown, val_start):
     )
 
     train_dl = training.to_dataloader(
-        train=True, batch_size=128, num_workers=NUM_WORKERS
+        train=True, batch_size=256, num_workers=NUM_WORKERS
     )
 
     val_dl = validation.to_dataloader(
         train=False,
-        batch_size=128,
+        batch_size=256,
         num_workers=NUM_WORKERS,
         sampler=range(0, len(validation), 24),
     )
@@ -206,6 +206,7 @@ def objective(trial, df, known, unknown, val_start):
         max_epochs=MAX_EPOCHS,
         accelerator="auto",
         devices=1,
+        precision="bf16-mixed",
         gradient_clip_val=clip,
         callbacks=[early_stop, window],
         logger=False,
