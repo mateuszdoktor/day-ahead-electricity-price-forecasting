@@ -1,4 +1,5 @@
 # Usage: python -m src.utils.tft.backtest --step d1 --trial 114
+#        python -m src.utils.tft.backtest --step base --trial 114
 # Per seed: results/tft/d1/test/trial_114/{1,2,3,4,5}.pt
 
 import argparse
@@ -6,8 +7,7 @@ import argparse
 import torch
 
 from src.config import BASE_DIR
-from src.utils.file_io import load_final_dataset
-from src.utils.tft.tuning import load_data, prepare
+from src.utils.tft.tuning import STEPS, load_data, load_frame, prepare
 from src.utils.tft.validate import forecast_seeds, load_top_trials, trial_by_number
 
 TRAIN_DAYS = 3 * 364
@@ -15,7 +15,7 @@ TRAIN_DAYS = 3 * 364
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--step", required=True, choices=["d1", "d2", "d3"])
+    ap.add_argument("--step", required=True, choices=STEPS)
     ap.add_argument("--trial", required=True, type=int)
     args = ap.parse_args()
 
@@ -24,8 +24,8 @@ def main():
     torch.set_float32_matmul_precision("high")
     trainval, known, unknown, _ = load_data(args.step)
     train_df = trainval.tail(TRAIN_DAYS * 24)
-    full = prepare(load_final_dataset("tft", args.step, "full"))
-    test = load_final_dataset("tft", args.step, "test")
+    full = prepare(load_frame(args.step, "full"))
+    test = load_frame(args.step, "test")
 
     path = (
         BASE_DIR

@@ -1,4 +1,5 @@
 # Usage: python -m src.utils.tft.tuning --step d1 --trials 50
+#        python -m src.utils.tft.tuning --step base --trials 50
 
 import argparse
 import json
@@ -13,12 +14,24 @@ from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
 from pytorch_forecasting.data import GroupNormalizer
 from pytorch_forecasting.metrics import MAE, QuantileLoss
 
-from src.config import BASE_DIR
+from src.config import (
+    BASE_DIR,
+    BASE_EXOG,
+    FULL_DATASET_END_DATE,
+    FULL_DATASET_START_DATE,
+    TEST_DATASET_END,
+    TEST_DATASET_START,
+    TRAIN_DATASET_END,
+    TRAIN_DATASET_START,
+    VAL_DATASET_END,
+    VAL_DATASET_START,
+)
 from src.utils.file_io import load_final_dataset
 
 TARGET = "PL_price"
 GROUP = "series"
 
+STEPS = ("d1", "d2", "d3", "base")
 PRED_LEN = 24
 ENCODER_LENGTH = 72
 MAX_EPOCHS = 40
@@ -70,12 +83,38 @@ def prepare(df):
     return df
 
 
+_SPLITS = {
+    "full": (FULL_DATASET_START_DATE, FULL_DATASET_END_DATE),
+    "train": (TRAIN_DATASET_START, TRAIN_DATASET_END),
+    "val": (VAL_DATASET_START, VAL_DATASET_END),
+    "test": (TEST_DATASET_START, TEST_DATASET_END),
+}
+
+
+def load_frame(step, split):
+    if step != "base":
+        return load_final_dataset("tft", step, split)
+
+    from src.utils.feature_engineering.fe_calendar import (
+        add_calendar_features,
+        add_time_idx,
+    )
+
+    full = add_time_idx(add_calendar_features(load_final_dataset("base", "pl", "full")))
+    start, end = _SPLITS[split]
+    return full.loc[start:f"{end} 23:00"].copy()
+
+
 def load_data(step):
-    train = load_final_dataset("tft", step, "train")
-    val = load_final_dataset("tft", step, "val")
+    train = load_frame(step, "train")
+    val = load_frame(step, "val")
     df = prepare(pd.concat([train, val]))
 
-    known = [c for c in KNOWN_REALS if c in df.columns]
+    whitelist = BASE_EXOG if step == "base" else KNOWN_REALS
+    known = [c for c in whitelist if c in df.columns]
+    if step == "base" and known != list(BASE_EXOG):
+        missing = [c for c in BASE_EXOG if c not in known]
+        raise KeyError(f"base dataset is missing {missing}")
     skip = {"time_idx", GROUP, *KNOWN_CATEGORICALS, *known}
     unknown = [c for c in df.columns if c not in skip]
 
@@ -226,7 +265,7 @@ def objective(trial, df, known, unknown, val_start):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--step", required=True, choices=["d1", "d2", "d3"])
+    ap.add_argument("--step", required=True, choices=STEPS)
     ap.add_argument("--trials", type=int, default=50, help="trials to run now")
     args = ap.parse_args()
 

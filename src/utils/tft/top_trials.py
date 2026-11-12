@@ -1,4 +1,5 @@
 # Usage: python -m src.utils.tft.top_trials --step d1
+#        python -m src.utils.tft.top_trials --step base
 
 import argparse
 import json
@@ -7,13 +8,14 @@ import math
 import optuna
 
 from src.config import BASE_DIR
+from src.utils.tft.tuning import STEPS
 
 TOP_N = 5
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--step", required=True, choices=["d1", "d2", "d3"])
+    ap.add_argument("--step", required=True, choices=STEPS)
     args = ap.parse_args()
 
     out_dir = BASE_DIR / "results" / "tft" / args.step

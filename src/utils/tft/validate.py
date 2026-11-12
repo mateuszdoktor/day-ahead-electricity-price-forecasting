@@ -1,5 +1,6 @@
 # Usage: python -m src.utils.tft.validate --step d1
 #        python -m src.utils.tft.validate --step d1 --trial 114
+#        python -m src.utils.tft.validate --step base
 
 import argparse
 import gc
@@ -11,11 +12,12 @@ import torch
 from pytorch_forecasting import TimeSeriesDataSet
 
 from src.config import BASE_DIR
-from src.utils.file_io import load_final_dataset
 from src.utils.tft.tuning import (
     ENCODER_LENGTH,
     NUM_WORKERS,
+    STEPS,
     load_data,
+    load_frame,
     make_model,
     make_training_dataset,
 )
@@ -131,7 +133,7 @@ def forecast_seeds(
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--step", required=True, choices=["d1", "d2", "d3"])
+    ap.add_argument("--step", required=True, choices=STEPS)
     ap.add_argument("--trial", type=int)
     args = ap.parse_args()
 
@@ -142,7 +144,7 @@ def main():
     torch.set_float32_matmul_precision("high")
     df, known, unknown, val_start = load_data(args.step)
     train_df = df[df.time_idx < val_start]
-    val = load_final_dataset("tft", args.step, "val")
+    val = load_frame(args.step, "val")
 
     for trial in trials:
         path = (
