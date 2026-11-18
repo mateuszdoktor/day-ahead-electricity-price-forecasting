@@ -32,12 +32,7 @@ TFT_D3 = [
     "flow_CZ_SK",
 ]
 
-COLUMNS = {
-    "tft": {
-        "d2": TFT_D2,
-        "d3": TFT_D3,
-    },
-}
+COLUMNS = {"d2": TFT_D2, "d3": TFT_D3}
 
 
 def calculate_net_positions(jao: pd.DataFrame) -> dict[str, pd.Series]:
@@ -93,8 +88,8 @@ def create_all_jao_features(jao: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def select_features(features: pd.DataFrame, model: str, step: str) -> pd.DataFrame:
-    if model not in COLUMNS or step not in COLUMNS[model]:
-        raise KeyError((model, step))
+def select_features(features: pd.DataFrame, step: str) -> pd.DataFrame:
+    if step not in COLUMNS:
+        raise KeyError(step)
 
-    return features[COLUMNS[model][step]].copy()
+    return features[COLUMNS[step]].copy()

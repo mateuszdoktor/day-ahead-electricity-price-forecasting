@@ -48,12 +48,7 @@ TFT_D3 = [
     "LT_load_fc",
 ]
 
-COLUMNS = {
-    "tft": {
-        "d1": TFT_D1,
-        "d3": TFT_D3,
-    },
-}
+COLUMNS = {"d1": TFT_D1, "d3": TFT_D3}
 
 
 def calculate_pl_features(pl: pd.DataFrame) -> dict[str, pd.Series]:
@@ -109,8 +104,8 @@ def create_features(data_entsoe: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return features.tz_convert("UTC")
 
 
-def select_features(features: pd.DataFrame, model: str, step: str) -> pd.DataFrame:
-    if model not in COLUMNS or step not in COLUMNS[model]:
-        raise KeyError((model, step))
+def select_features(features: pd.DataFrame, step: str) -> pd.DataFrame:
+    if step not in COLUMNS:
+        raise KeyError(step)
 
-    return features[COLUMNS[model][step]].copy()
+    return features[COLUMNS[step]].copy()

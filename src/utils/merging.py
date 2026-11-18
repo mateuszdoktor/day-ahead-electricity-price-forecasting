@@ -12,7 +12,6 @@ from src.config import (
     VAL_DATASET_END,
     VAL_DATASET_START,
 )
-from src.utils.feature_engineering.fe_trees import build_tree_features, shift_unknown
 from src.utils.file_io import load_merged_data
 
 STEPS = ("d1", "d2", "d3")
@@ -24,11 +23,7 @@ STEP_BLOCKS = {
 }
 
 
-DATASETS = (
-    [("tft", step) for step in STEPS]
-    + [("trees", step) for step in STEPS]
-    + [("base", "pl")]
-)
+DATASETS = [("tft", step) for step in STEPS] + [("base", "pl")]
 
 SPLITS = {
     "full": (FULL_DATASET_START_DATE, FULL_DATASET_END_DATE),
@@ -48,12 +43,11 @@ def blocks_up_to(step: str) -> list[tuple[str, str]]:
 
 
 def build_base_features(df: pd.DataFrame) -> pd.DataFrame:
-    lagged = shift_unknown(df)
     out = df[["PL_price", "PL_load_fc"]].copy()
     out["PL_resload_lag24"] = (
         df["PL_load_fc"].shift(24)
-        - lagged["PL_solar_fc_lag24"]
-        - lagged["PL_wind_fc_lag24"]
+        - df["PL_solar_fc"].shift(24)
+        - df["PL_wind_fc"].shift(24)
     )
     return out
 
@@ -79,8 +73,6 @@ def merge_features(model: str, scope: str, date_range: str) -> pd.DataFrame:
     ]
 
     df = pd.concat([price, *blocks], axis=1, join="inner").sort_index()
-    if model == "trees":
-        df = build_tree_features(df, step)
     if model == "base":
         df = build_base_features(df)
     return df

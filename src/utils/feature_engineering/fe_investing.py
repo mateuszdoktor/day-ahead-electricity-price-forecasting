@@ -16,11 +16,7 @@ TFT_D1 = [
     "eurpln_lag24",
 ]
 
-COLUMNS = {
-    "tft": {
-        "d1": TFT_D1,
-    },
-}
+COLUMNS = {"d1": TFT_D1}
 
 
 def create_all_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -32,8 +28,8 @@ def create_all_features(df: pd.DataFrame) -> pd.DataFrame:
     return features.replace([float("inf"), float("-inf")], float("nan"))
 
 
-def select_features(features: pd.DataFrame, model: str, step: str) -> pd.DataFrame:
-    if model not in COLUMNS or step not in COLUMNS[model]:
-        raise KeyError((model, step))
+def select_features(features: pd.DataFrame, step: str) -> pd.DataFrame:
+    if step not in COLUMNS:
+        raise KeyError(step)
 
-    return features[COLUMNS[model][step]].copy()
+    return features[COLUMNS[step]].copy()
