@@ -7,7 +7,13 @@ import argparse
 import torch
 
 from src.config import BASE_DIR
-from src.utils.tft.tuning import STEPS, load_data, load_frame, prepare
+from src.utils.tft.tuning import (
+    STEPS,
+    categoricals_for,
+    load_data,
+    load_frame,
+    prepare,
+)
 from src.utils.tft.validate import forecast_seeds, load_top_trials, trial_by_number
 
 TRAIN_DAYS = 3 * 364
@@ -23,8 +29,9 @@ def main():
 
     torch.set_float32_matmul_precision("high")
     trainval, known, unknown, _ = load_data(args.step)
+    categoricals = categoricals_for(args.step)
     train_df = trainval.tail(TRAIN_DAYS * 24)
-    full = prepare(load_frame(args.step, "full"))
+    full = prepare(load_frame(args.step, "full"), args.step)
     test = load_frame(args.step, "test")
 
     path = (
@@ -44,6 +51,7 @@ def main():
         test["time_idx"].min(),
         test.index,
         path,
+        categoricals,
         save_dir=path.parent / path.stem,
     )
 

@@ -41,6 +41,7 @@ NUM_WORKERS = 8
 SEED = 42
 
 KNOWN_CATEGORICALS = ["hour", "dow", "month", "is_holiday", "is_bridge"]
+BASE_KNOWN_CATEGORICALS = ["hour", "dow"]
 KNOWN_REALS = [
     # D1
     "PL_price_lag24",
@@ -75,11 +76,24 @@ KNOWN_REALS = [
     "flow_CZ_SK",
 ]
 
+BASE_KNOWN_REALS = [
+    "PL_price_lag24",
+    "PL_price_lag48",
+    "PL_price_lag72",
+    "PL_price_lag168",
+    *BASE_EXOG,
+]
 
-def prepare(df):
+
+def categoricals_for(step):
+    return BASE_KNOWN_CATEGORICALS if step == "base" else KNOWN_CATEGORICALS
+
+
+def prepare(df, step):
     df = df.reset_index(drop=True)
     df[GROUP] = "series"
-    df[KNOWN_CATEGORICALS] = df[KNOWN_CATEGORICALS].astype(str)
+    categoricals = categoricals_for(step)
+    df[categoricals] = df[categoricals].astype(str)
     return df
 
 
@@ -96,11 +110,25 @@ def load_frame(step, split):
         return load_final_dataset("tft", step, split)
 
     from src.utils.feature_engineering.fe_calendar import (
+        CALENDAR_COLUMNS,
         add_calendar_features,
         add_time_idx,
     )
 
-    full = add_time_idx(add_calendar_features(load_final_dataset("base", "pl", "full")))
+    df = load_final_dataset("base", "pl", "full")
+    lag_columns = [
+        "PL_price_lag24",
+        "PL_price_lag48",
+        "PL_price_lag72",
+        "PL_price_lag168",
+    ]
+    lags = load_final_dataset("tft", "d1", "full")[lag_columns]
+    df = df.join(lags)
+
+    full = add_time_idx(add_calendar_features(df))
+    drop = [c for c in CALENDAR_COLUMNS if c not in BASE_KNOWN_CATEGORICALS]
+    full = full.drop(columns=drop)
+
     start, end = _SPLITS[split]
     return full.loc[start:f"{end} 23:00"].copy()
 
@@ -108,20 +136,21 @@ def load_frame(step, split):
 def load_data(step):
     train = load_frame(step, "train")
     val = load_frame(step, "val")
-    df = prepare(pd.concat([train, val]))
+    df = prepare(pd.concat([train, val]), step)
 
-    whitelist = BASE_EXOG if step == "base" else KNOWN_REALS
+    whitelist = BASE_KNOWN_REALS if step == "base" else KNOWN_REALS
     known = [c for c in whitelist if c in df.columns]
-    if step == "base" and known != list(BASE_EXOG):
-        missing = [c for c in BASE_EXOG if c not in known]
+    if step == "base" and known != list(BASE_KNOWN_REALS):
+        missing = [c for c in BASE_KNOWN_REALS if c not in known]
         raise KeyError(f"base dataset is missing {missing}")
-    skip = {"time_idx", GROUP, *KNOWN_CATEGORICALS, *known}
+    categoricals = categoricals_for(step)
+    skip = {"time_idx", GROUP, *categoricals, *known}
     unknown = [c for c in df.columns if c not in skip]
 
     return df, known, unknown, val["time_idx"].min()
 
 
-def make_training_dataset(df, known, unknown, enc_len):
+def make_training_dataset(df, known, unknown, enc_len, categoricals):
     return TimeSeriesDataSet(
         df,
         time_idx="time_idx",
@@ -132,7 +161,7 @@ def make_training_dataset(df, known, unknown, enc_len):
         min_prediction_length=PRED_LEN,
         max_prediction_length=PRED_LEN,
         static_categoricals=[GROUP],
-        time_varying_known_categoricals=KNOWN_CATEGORICALS,
+        time_varying_known_categoricals=categoricals,
         time_varying_known_reals=known,
         time_varying_unknown_reals=unknown,
         target_normalizer=GroupNormalizer(groups=[GROUP]),
@@ -196,11 +225,11 @@ def make_model(training, **params):
     )
 
 
-def objective(trial, df, known, unknown, val_start):
+def objective(trial, df, known, unknown, val_start, categoricals):
     pl.seed_everything(SEED, workers=True)
 
     training = make_training_dataset(
-        df[df.time_idx < val_start], known, unknown, ENCODER_LENGTH
+        df[df.time_idx < val_start], known, unknown, ENCODER_LENGTH, categoricals
     )
 
     validation = TimeSeriesDataSet.from_dataset(
@@ -275,6 +304,7 @@ def main():
     torch.set_float32_matmul_precision("high")
 
     df, known, unknown, val_start = load_data(args.step)
+    categoricals = categoricals_for(args.step)
 
     study = optuna.create_study(
         study_name=f"tft_{args.step}",
@@ -290,7 +320,7 @@ def main():
     study.set_metric_names(["val_MAE"])
 
     study.optimize(
-        lambda trial: objective(trial, df, known, unknown, val_start),
+        lambda trial: objective(trial, df, known, unknown, val_start, categoricals),
         n_trials=args.trials,
         catch=(torch.cuda.OutOfMemoryError,),
         gc_after_trial=True,
@@ -307,7 +337,7 @@ def main():
         "n_trials": len(study.trials),
         "prediction_length": PRED_LEN,
         "encoder_length": ENCODER_LENGTH,
-        "known_categoricals": KNOWN_CATEGORICALS,
+        "known_categoricals": categoricals,
         "known_reals": known,
         "unknown_reals": unknown,
     }

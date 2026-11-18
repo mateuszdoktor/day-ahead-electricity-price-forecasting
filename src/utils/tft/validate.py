@@ -16,6 +16,7 @@ from src.utils.tft.tuning import (
     ENCODER_LENGTH,
     NUM_WORKERS,
     STEPS,
+    categoricals_for,
     load_data,
     load_frame,
     make_model,
@@ -56,6 +57,7 @@ def forecast_seeds(
     pred_start,
     index,
     out_path,
+    categoricals,
     save_dir=None,
 ):
     params = dict(trial["params"])
@@ -73,7 +75,9 @@ def forecast_seeds(
         print(f"trial {trial['number']} seed {seed}")
         pl.seed_everything(seed, workers=True)
 
-        training = make_training_dataset(train_df.copy(), known, unknown, enc_len)
+        training = make_training_dataset(
+            train_df.copy(), known, unknown, enc_len, categoricals
+        )
         model = make_model(training, **params)
         train_dl = training.to_dataloader(
             train=True, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS
@@ -143,6 +147,7 @@ def main():
 
     torch.set_float32_matmul_precision("high")
     df, known, unknown, val_start = load_data(args.step)
+    categoricals = categoricals_for(args.step)
     train_df = df[df.time_idx < val_start]
     val = load_frame(args.step, "val")
 
@@ -159,7 +164,7 @@ def main():
             print(f"skip {path}")
             continue
         forecast_seeds(
-            train_df, df, known, unknown, trial, val_start, val.index, path
+            train_df, df, known, unknown, trial, val_start, val.index, path, categoricals
         )
 
 
