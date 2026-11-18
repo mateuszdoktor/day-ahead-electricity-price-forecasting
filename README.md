@@ -10,7 +10,7 @@ This project forecasts the 24 hourly electricity prices for the next delivery da
 
 > The best TFT ensemble reached **18.855 EUR/MWh MAE**, **13.4% lower than LEAR** over 364 held-out days.
 
-[Test results](#test-results) · [Data and modelling](#data-and-modelling) · [Explore the notebooks](#explore-the-notebooks)
+[Test results](#test-results) · [Data and modelling](#data-and-modelling) · [Methodology guides](#methodology-guides) · [Explore the notebooks](#explore-the-notebooks)
 
 ## Test results
 
@@ -57,6 +57,14 @@ TFT uses 72 hours of history and separates historical inputs from variables avai
 Each feature set has its own Optuna study. The five shortlisted configurations per set were retrained with five random seeds and ranked by mean validation MAE. Each test ensemble averages the five forecasts from its selected configuration. The LEAR and DNN benchmarks use `epftoolbox` and a smaller set of Polish inputs. They are refit daily. TFT weights are fixed throughout the test period.
 
 The interpretation notebooks look at which inputs receive weight and which historical hours receive attention. In D2, market coupling accounts for about 53% of the variable-selection weight on the forecast day.
+
+## Methodology guides
+
+| Guide | What it covers |
+| --- | --- |
+| [TFT hyperparameter search](docs/tft-tuning/README.md) | What Optuna searches, how trials are scored and how the top five are shortlisted |
+| [Backtesting and model selection](docs/backtesting/README.md) | The two rounds of TFT training, daily recalibration for LEAR and DNN, and how the test forecasts are scored |
+| [Data collection and preparation](docs/data-pipeline/README.md) | How ENTSO-E, JAO and Investing.com data become aligned hourly inputs |
 
 ## Explore the notebooks
 
