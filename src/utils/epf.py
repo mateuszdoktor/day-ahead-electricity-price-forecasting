@@ -58,41 +58,6 @@ def evaluate_lear(
     return pred_df
 
 
-# def evaluate_lear_screening(
-#     dataset: pd.DataFrame,
-#     calibration_window: int,
-#     exog: list[str] | None,
-#     forecast_starts,
-#     n_days: int = 7,
-#     model: str | None = None,
-#     path: Path | None = None,
-# ) -> pd.DataFrame:
-
-#     frames = []
-#     starts = list(forecast_starts)
-#     for i, start in enumerate(starts, start=1):
-#         start_ts = pd.Timestamp(start).normalize()
-#         end_ts = start_ts + pd.Timedelta(days=n_days - 1)
-#         label = model or "LEAR"
-#         print(f"[{i}/{len(starts)}] {label} {start_ts.date()} -> {end_ts.date()}")
-#         frames.append(
-#             evaluate_lear(
-#                 dataset=dataset,
-#                 calibration_window=calibration_window,
-#                 exog=exog,
-#                 forecast_start=start_ts,
-#                 forecast_end=end_ts,
-#                 progress=False,
-#             )
-#         )
-
-#     preds = pd.concat(frames).sort_index()
-#     if path is not None:
-#         path.parent.mkdir(parents=True, exist_ok=True)
-#         preds.to_csv(path)
-#     return preds
-
-
 def _save_dnn_dataset(dataset, exog, name):
     df = select_exogenous(dataset, exog)
     DNN_DATASETS_DIR.mkdir(parents=True, exist_ok=True)
@@ -214,47 +179,3 @@ def evaluate_dnn(
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         pred_df.to_csv(path)
     return pred_df
-
-
-# def evaluate_dnn_screening(
-#     dataset,
-#     calibration_window,
-#     exog,
-#     forecast_starts,
-#     experiment_id,
-#     n_days: int = 7,
-#     model: str | None = None,
-#     path: Path | None = None,
-#     nlayers=2,
-#     years_test=2,
-#     shuffle_train=1,
-#     data_augmentation=0,
-# ) -> pd.DataFrame:
-#     frames = []
-#     starts = list(forecast_starts)
-#     label = model or experiment_id
-#     for i, start in enumerate(starts, start=1):
-#         start_ts = pd.Timestamp(start).normalize()
-#         end_ts = start_ts + pd.Timedelta(days=n_days - 1)
-#         print(f"[{i}/{len(starts)}] {label} {start_ts.date()} -> {end_ts.date()}")
-#         frames.append(
-#             evaluate_dnn(
-#                 dataset=dataset,
-#                 calibration_window=calibration_window,
-#                 exog=exog,
-#                 forecast_start=start_ts,
-#                 forecast_end=end_ts,
-#                 experiment_id=experiment_id,
-#                 progress=False,
-#                 nlayers=nlayers,
-#                 years_test=years_test,
-#                 shuffle_train=shuffle_train,
-#                 data_augmentation=data_augmentation,
-#             )
-#         )
-
-#     preds = pd.concat(frames).sort_index()
-#     if path is not None:
-#         path.parent.mkdir(parents=True, exist_ok=True)
-#         preds.to_csv(path)
-#     return preds
