@@ -3,8 +3,9 @@ import pandas as pd
 import torch
 
 from src.config import BASE_DIR
+from src.utils.plots import FIG_WIDTH_IN
 
-CHOSEN = {"d1": 114, "d2": 75, "d3": 99}
+CHOSEN = {"d1": 112, "d2": 93, "d3": 112}
 SEEDS = (1, 2, 3, 4, 5)
 
 
@@ -31,10 +32,12 @@ def encoder_attention(step):
     return pd.DataFrame(values, index=range(24), columns=range(-length, 0))
 
 
-def plot_attention_heatmap(attention):
+def plot_attention_heatmap(attention, title=None):
     length = attention.shape[1]
-    fig, ax = plt.subplots(figsize=(8, 4.2))
-    image = ax.imshow(attention.to_numpy(), aspect="auto", origin="upper")
+    fig, ax = plt.subplots(figsize=(FIG_WIDTH_IN, 3.8), layout="constrained")
+    image = ax.imshow(
+        attention.to_numpy(), aspect="auto", origin="upper", cmap="viridis"
+    )
     for edge in range(24, length, 24):
         ax.axvline(edge - 0.5, color="white", lw=0.8, ls="--")
     ax.set_yticks(range(0, 24, 2), [f"{hour:02d}:00" for hour in range(0, 24, 2)])
@@ -42,7 +45,8 @@ def plot_attention_heatmap(attention):
     ax.set_xticks(ticks, [attention.columns[tick] for tick in ticks])
     ax.set_ylabel("Forecast hour")
     ax.set_xlabel("Encoder position")
-    fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04, label="A · E")
-    fig.tight_layout()
+    if title:
+        ax.set_title(title)
+    fig.colorbar(image, ax=ax, fraction=0.03, pad=0.02, label="A · E")
     plt.close(fig)
     return fig
