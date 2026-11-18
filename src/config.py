@@ -25,15 +25,10 @@ TEST_DATASET_END = "2026-10-18"
 LOCAL_TZ = "Europe/Warsaw"
 
 ENTSOE_BIDDING_ZONE_CODES = [
-    # "AT",
     "CZ",
     "DE_LU",
-    # "FR",
-    # "HU",
     "LT",
-    # "NO",
     "PL",
-    # "SE",
     "SE_4",
     "SK",
 ]
